@@ -80,64 +80,47 @@ run_case() {
     printf '%s\n' "$result"
 }
 
-# Jueves anterior al primer sábado: los seis pasos diarios.
-result="$(run_case weekday 4 2026-10 1)"
-assert_status weekday 0 "$result"
-assert_units weekday "${BASE_UNITS[@]}"
-assert_field weekday result success
-assert_field weekday step Finalizada
+# Cada día ejecuta exactamente la prueba que le corresponde, siempre al final.
+for day in 1 2 3 4 5 6 7; do
+    name="weekday_$day"
+    result="$(run_case "$name" "$day" 2026-11 "$day")"
+    assert_status "$name" 0 "$result"
+    if [ "$day" -eq 1 ]; then
+        assert_units "$name" "${BASE_UNITS[@]}" fumetaos-recovery-verify.service fumetaos-smart-test.service
+    else
+        assert_units "$name" "${BASE_UNITS[@]}" fumetaos-smart-short-test.service
+    fi
+    assert_field "$name" result success
+    [ ! -e "$TEST_DIR/$name/stamps/smart" ] || fail 'Se creó una marca mensual'
+done
 
-# Un fallo se registra, pero los pasos posteriores siguen ejecutándose.
-result="$(run_case failure 4 2026-10 1 fumetaos-recovery-backup.service)"
-assert_status failure 20 "$result"
-assert_units failure "${BASE_UNITS[@]}"
-assert_field failure result failed
-assert_field failure failed 'Copia de recuperación'
-
-# La limpieza Docker forma parte de la cadena y su fallo también se registra.
-result="$(run_case docker_failure 4 2026-10 1 fumetaos-docker-clean.service)"
-assert_status docker_failure 20 "$result"
-assert_units docker_failure "${BASE_UNITS[@]}"
-assert_field docker_failure result failed
-assert_field docker_failure failed 'Limpieza segura de Docker'
-
-# El lunes se añade la verificación; SMART ya figura como intentado ese mes.
-mkdir -p "$TEST_DIR/monday/stamps"
-printf '%s\n' 2026-10 >"$TEST_DIR/monday/stamps/smart"
-result="$(run_case monday 1 2026-10 5)"
-assert_status monday 0 "$result"
-assert_units monday "${BASE_UNITS[@]}" fumetaos-recovery-verify.service
-assert_field monday result success
-[ -f "$TEST_DIR/monday/stamps/verify" ] || fail 'monday: falta el registro de verificación'
-
-# El primer sábado, SMART va al final y se registra un único intento mensual.
-result="$(run_case saturday 6 2026-10 3)"
-assert_status saturday 0 "$result"
-assert_units saturday "${BASE_UNITS[@]}" fumetaos-smart-test.service
-assert_field saturday result success
-[ "$(<"$TEST_DIR/saturday/stamps/smart")" = 2026-10 ] ||
-    fail 'saturday: falta el registro SMART'
-
-# Si el primer sábado se perdió, se recupera una vez durante el mismo mes.
-result="$(run_case missed_saturday 7 2026-10 4)"
-assert_status missed_saturday 0 "$result"
-assert_units missed_saturday "${BASE_UNITS[@]}" fumetaos-smart-test.service
-
-# Si ya se intentó SMART en el mes, no se repite.
-mkdir -p "$TEST_DIR/smart_done/stamps"
-printf '%s\n' 2026-10 >"$TEST_DIR/smart_done/stamps/smart"
-result="$(run_case smart_done 7 2026-10 4)"
-assert_status smart_done 0 "$result"
-assert_units smart_done "${BASE_UNITS[@]}"
-
-# Una verificación fallida no se marca como exitosa.
-mkdir -p "$TEST_DIR/verify_failure/stamps"
-printf '%s\n' 2026-10 >"$TEST_DIR/verify_failure/stamps/smart"
-result="$(run_case verify_failure 1 2026-10 5 fumetaos-recovery-verify.service)"
+# Un fallo de verificación se registra y la larga del lunes sigue ejecutándose.
+result="$(run_case verify_failure 1 2026-11 2 fumetaos-recovery-verify.service)"
 assert_status verify_failure 20 "$result"
-assert_units verify_failure "${BASE_UNITS[@]}" fumetaos-recovery-verify.service
+assert_units verify_failure "${BASE_UNITS[@]}" fumetaos-recovery-verify.service fumetaos-smart-test.service
 assert_field verify_failure failed 'Verificación cifrada semanal'
-[ ! -e "$TEST_DIR/verify_failure/stamps/verify" ] ||
-    fail 'verify_failure: se marcó una verificación fallida'
+[ ! -e "$TEST_DIR/verify_failure/stamps/verify" ] || fail 'Se marcó una verificación fallida'
 
-echo '✅ Cadena nocturna: ocho escenarios simulados correctos; ninguna tarea real iniciada.'
+result="$(run_case short_failure 2 2026-11 3 fumetaos-smart-short-test.service)"
+assert_status short_failure 20 "$result"
+assert_field short_failure failed 'Prueba SMART corta diaria'
+result="$(run_case long_failure 1 2026-11 2 fumetaos-smart-test.service)"
+assert_status long_failure 20 "$result"
+assert_field long_failure failed 'Prueba SMART larga semanal'
+
+# El primer sábado y los días posteriores no desencadenan ninguna larga mensual.
+result="$(run_case first_saturday 6 2026-11 7)"
+assert_status first_saturday 0 "$result"
+assert_units first_saturday "${BASE_UNITS[@]}" fumetaos-smart-short-test.service
+result="$(run_case late_month 5 2026-11 27)"
+assert_status late_month 0 "$result"
+assert_units late_month "${BASE_UNITS[@]}" fumetaos-smart-short-test.service
+
+# Una antigua marca mensual no afecta a la larga del lunes ni se modifica.
+mkdir -p "$TEST_DIR/old_stamp/stamps"
+printf '%s\n' 2026-10 >"$TEST_DIR/old_stamp/stamps/smart"
+result="$(run_case old_stamp 1 2026-11 2)"
+assert_status old_stamp 0 "$result"
+assert_units old_stamp "${BASE_UNITS[@]}" fumetaos-recovery-verify.service fumetaos-smart-test.service
+[ "$(cat "$TEST_DIR/old_stamp/stamps/smart")" = 2026-10 ] || fail 'Se modificó la marca histórica'
+echo '✅ Trece escenarios simulados correctos; ninguna tarea real iniciada.'

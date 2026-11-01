@@ -1,0 +1,10 @@
+[Unit]
+Description=Prueba SMART corta diaria de FumetaOS
+
+[Service]
+Type=oneshot
+User=root
+Nice=19
+IOSchedulingClass=idle
+TimeoutStartSec=15min
+ExecStart=/opt/fumetaos/bin/fumetaos-smart-short-test

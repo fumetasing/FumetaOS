@@ -46,9 +46,18 @@ if ! flock -n 9; then
         exit 0
 fi
 
-echo "🛠️ Prueba SMART larga mensual"
+echo "🛠️ Prueba SMART larga"
 echo "HDD: $HDD_NAME ($HDD_DEVICE)"
 echo "SSD: $SSD_NAME ($SSD_DEVICE)"
+
+# No interrumpir una prueba que se haya iniciado manualmente.
+for device in "$HDD_DEVICE" "$SSD_DEVICE"; do
+    status="$(smartctl_cmd -c "$device" 2>&1)" ||
+        fallar "No se pudo consultar el estado SMART de $device"
+    if printf '%s\n' "$status" | grep -qi 'in progress'; then
+        fallar "Ya hay una prueba SMART en curso en $device; se conserva"
+    fi
+done
 
 echo
 echo "===== INICIANDO HDD ====="
@@ -98,4 +107,4 @@ fi
 
 echo "✅ SSD Sistema: prueba larga terminada y SMART correcto"
 echo
-echo "✅ Pruebas SMART largas mensuales terminadas correctamente"
+echo "✅ Pruebas SMART largas terminadas correctamente"

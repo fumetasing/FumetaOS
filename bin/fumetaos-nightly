@@ -4,7 +4,6 @@
 set -uo pipefail
 
 VERIFY_STAMP=/var/lib/fumetaos/nightly-verify-last-success
-SMART_STAMP=/var/lib/fumetaos/nightly-smart-last-attempt
 STATUS_FILE=/var/lib/fumetaos-nightly-status
 LOCK_FILE=/run/lock/fumetaos-nightly.lock
 declare -a FAILED=()
@@ -18,7 +17,7 @@ print_plan() {
         'después → actualización de Ubuntu' \
         'después → limpieza segura de Docker' \
         'los lunes, después → verificación cifrada' \
-        'el primer sábado de cada mes, al final → prueba SMART larga'
+        'al final → SMART corto de martes a domingo; largo los lunes'
 }
 
 write_status() {
@@ -81,19 +80,6 @@ verify_due() {
     [ $(( $(date +%s) - last_success )) -ge $((7 * 24 * 3600)) ]
 }
 
-smart_due() {
-    local first_weekday first_saturday last_attempt=''
-
-    first_weekday=$(date -d "$START_MONTH-01" +%u) || return 1
-    first_saturday=$((1 + (6 - first_weekday + 7) % 7))
-    [ "$START_DAY_OF_MONTH" -ge "$first_saturday" ] || return 1
-
-    if [ -f "$SMART_STAMP" ]; then
-        last_attempt=$(< "$SMART_STAMP")
-    fi
-    [ "$last_attempt" != "$START_MONTH" ]
-}
-
 nightly_run() {
 exec 9>"$LOCK_FILE"
 if ! flock -n 9; then
@@ -133,17 +119,11 @@ else
     echo 'ℹ️ Verificación cifrada: lunes, o tras un lunes perdido por apagado'
 fi
 
-if smart_due; then
-    if install -d -m 755 "$(dirname "$SMART_STAMP")" &&
-        printf '%s\n' "$START_MONTH" > "$SMART_STAMP"; then
-        run_step 'Prueba SMART larga mensual' fumetaos-smart-test.service
-    else
-        echo '🔴 No se pudo registrar el intento mensual de SMART' >&2
-        FAILED+=('Registro de SMART')
-    fi
+# Una prueba larga sustituye a la corta de esa noche.
+if [ "$START_DAY" -eq 1 ]; then
+    run_step 'Prueba SMART larga semanal' fumetaos-smart-test.service
 else
-    echo
-    echo 'ℹ️ Prueba SMART larga: primer sábado del mes, o recuperación de esa cita mensual'
+    run_step 'Prueba SMART corta diaria' fumetaos-smart-short-test.service
 fi
 
 echo
@@ -179,8 +159,6 @@ nightly_main() {
     fi
 
     START_DAY=$(date +%u)
-    START_MONTH=$(date +%Y-%m)
-    START_DAY_OF_MONTH=$(date +%-d)
     nightly_run
 }
 

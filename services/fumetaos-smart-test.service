@@ -1,5 +1,5 @@
 [Unit]
-Description=Prueba SMART larga mensual de FumetaOS
+Description=Prueba SMART larga de FumetaOS
 
 [Service]
 Type=oneshot

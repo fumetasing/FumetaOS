@@ -1,5 +1,16 @@
 # FumetaOS Changelog
 
+## v2.4.36
+
+### Changed
+
+- Las pruebas SMART de HDD y SSD se ejecutan al final de la cadena nocturna, sin hora independiente: cortas de martes a domingo y larga los lunes, después de la verificación cifrada.
+- Se retira la cita larga mensual redundante. Si se pierde un lunes, la siguiente larga queda para el siguiente lunes.
+- El servicio corto comparte bloqueo con el largo y comprueba sus resultados; ambos evitan interrumpir pruebas ya en curso.
+- Se conserva la vigilancia continua de smartd; en este despliegue se ha retirado su programación fija de pruebas.
+
+Validados trece escenarios simulados de la cadena y nueve del SMART corto, sintaxis y análisis estático. Código, servicios y VERSION sincronizados en proyecto, instalación activa y paquete. Sin iniciar copias o pruebas SMART reales ni cambiar los horarios de Telegram.
+
 ## v2.4.35
 
 ### Added

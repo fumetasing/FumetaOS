@@ -121,3 +121,9 @@ MIT License
 ---
 
 **Desarrollado por Fumeta.**
+
+## Pruebas SMART en la cadena nocturna
+
+Desde v2.4.36, HDD y SSD ejecutan una prueba corta de martes a domingo y una larga los lunes, al terminar la cadena nocturna y después de la verificación cifrada cuando corresponde. No hay hora independiente ni cita larga mensual.
+
+Consulta [el calendario y los detalles de SMART](docs/SMART-AL-FINAL-DE-LA-CADENA.md). En instalaciones con pruebas programadas adicionalmente en smartd, retira esa programación para evitar duplicados y conserva su vigilancia continua.
