@@ -26,7 +26,7 @@ if ! referencia_local="$(docker inspect --format '{{.Config.Image}}' "$CONTENEDO
 fi
 
 case "$referencia_local" in
-linuxserver/filezilla:*|linuxserver/filezilla@sha256:*) ;;
+linuxserver/filezilla:*|linuxserver/filezilla@sha256:*|lscr.io/linuxserver/filezilla:*|lscr.io/linuxserver/filezilla@sha256:*) ;;
 *) aviso "imagen distinta de LinuxServer; requiere revisión" ;;
 esac
 
@@ -35,7 +35,7 @@ case "$referencia_local" in
 *)
 	digest_local="$(
 		docker image inspect --format '{{range .RepoDigests}}{{println .}}{{end}}' "$referencia_local" 2>/dev/null |
-			awk -F@ '$1 == "linuxserver/filezilla" {print $2; exit}'
+			awk -F@ '$1 == "linuxserver/filezilla" || $1 == "lscr.io/linuxserver/filezilla" {print $2; exit}'
 	)" || aviso "no se pudo consultar la imagen instalada"
 	;;
 esac
@@ -63,6 +63,20 @@ digest_remoto="$(
 		awk 'tolower($0) ~ /^docker-content-digest:/ { sub(/^[^:]*:[[:space:]]*/, ""); gsub("\r", ""); print; exit }'
 )" || aviso "no se pudo consultar la imagen remota"
 [[ "$digest_remoto" =~ ^sha256:[0-9a-f]{64}$ ]] || aviso "Docker Hub no publicó un digest válido"
+
+# Una referencia fijada puede identificar el manifiesto de una plataforma.
+if [ "$digest_local" != "$digest_remoto" ]; then
+	digests_plataforma="$(
+		curl --silent --show-error --fail --connect-timeout 5 --max-time 15 \
+			-H "Authorization: Bearer $token" \
+			-H 'Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.oci.image.manifest.v1+json, application/vnd.docker.distribution.manifest.v2+json' \
+			"https://registry-1.docker.io/v2/${REPOSITORIO}/manifests/${digest_remoto}" 2>/dev/null |
+			jq -r '.manifests[]? | select(.platform.os == "linux") | .digest'
+	)" || aviso "no se pudieron consultar las variantes de la imagen remota"
+	if grep -Fxq "$digest_local" <<< "$digests_plataforma"; then
+		digest_remoto="$digest_local"
+	fi
+fi
 
 if [ "$digest_local" = "$digest_remoto" ]; then
 	echo "🟢 FileZilla al día ($version_local)"

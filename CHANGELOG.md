@@ -1,5 +1,9 @@
 # FumetaOS Changelog
 
+## v2.4.38
+
+- El monitor de FileZilla reconoce las imágenes oficiales de LinuxServer en lscr.io y compara el manifiesto instalado con las variantes del índice remoto.
+
 ## v2.4.37
 
 ### Changed
