@@ -11,6 +11,9 @@ MAC_USB_MOUNT="/Volumes/Data USB"
 
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
 DELETE_LIMIT=50
+MAC_RECOVERY_RELATIVE="backups/fumetaos/recovery-repo"
+MAC_RECOVERY_SOURCE="${SOURCE_DIR%/}/$MAC_RECOVERY_RELATIVE"
+MAC_RECOVERY_DESTINATION="$MAC_DESTINATION/$MAC_RECOVERY_RELATIVE"
 # FUMETAOS_DAILY_DELETE_50_PS4_V1
 MAX_RETRIES=3
 RETRY_DELAY=60
@@ -28,10 +31,13 @@ RSYNC_FILTER_OPTIONS=(
 	--exclude='/lost+found/'
 	--exclude='/TimeCapsule/'
 	--filter='P /TimeCapsule/***'
+	--exclude='/backups/fumetaos/recovery-repo/'
+	--filter='P /backups/fumetaos/recovery-repo/***'
 )
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/../core/mac-mirror-common.sh"
+source "$SCRIPT_DIR/../core/mac-mirror-recovery.sh"
 
 mostrar_error() {
 	echo "❌ $1"
@@ -62,7 +68,7 @@ manejar_error() {
 			exit 25
 		fi
 		echo "⚠️ Espejo parcial: se alcanzó el cupo de borrados. Pendientes para el próximo día con cupo disponible."
-		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo al Mac pendiente. Cupo diario de 50 borrados fuera de PS4 & PS5 alcanzado; continúa con el cupo del próximo día. No se da por completa esta ejecución." || true
+		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo al Mac pendiente. Cupo diario de 50 borrados fuera de PS4 & PS5 y del repositorio cifrado de recuperación alcanzado; continúa con el cupo del próximo día. No se da por completa esta ejecución." || true
 		exit 25
 	fi
 
@@ -75,7 +81,7 @@ manejar_error() {
 }
 
 comprobar_borrados_previstos() {
-	echo "ℹ️ Se aplicará el cupo persistente de 50 borrados diarios fuera de PS4 & PS5."
+	echo "ℹ️ Se aplicará el cupo persistente de 50 borrados diarios fuera de PS4 & PS5 y del repositorio cifrado de recuperación."
 }
 
 fumetaos_cupo_diario() {
@@ -146,14 +152,15 @@ ejecutar_rsync_con_reintentos() {
 	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
 	[ -d "${SOURCE_DIR%/}/PS4 & PS5" ] && [ ! -L "${SOURCE_DIR%/}/PS4 & PS5" ] ||
 		mostrar_error "La carpeta original PS4 & PS5 no es un directorio real; no se copia ni borra nada"
-	CURRENT_STEP="Contar borrados fuera de PS4 & PS5"
+	mac_mirror_preparar_recovery || mostrar_error "Repositorio cifrado no válido; no se copia ni borra nada"
+	CURRENT_STEP="Contar borrados sujetos al cupo diario"
 	deletes="$(mac_mirror_contar_borrados "$SOURCE_DIR" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" "${otros[@]}")" || return "$?"
 	case "$deletes" in ''|*[!0-9]*) mostrar_error "No se pudo contar los borrados" ;; esac
 	mode=reserve
 	[ "${#DRY_RUN[@]}" -eq 0 ] || mode=inspect
 	quota="$(fumetaos_cupo_diario "$deletes" "$mode")" || return "$?"
 	case "$quota" in ''|*[!0-9]*) mostrar_error "Cupo no válido" ;; esac
-	echo "🛡️ Cupo disponible para esta transferencia: $quota. Máximo diario: 50; PS4 & PS5 exenta."
+	echo "🛡️ Cupo disponible para esta transferencia: $quota. Máximo diario: 50; PS4 & PS5 y repositorio cifrado exentos."
 	# Una sola transferencia por grupo, nunca reintentar borrados automáticamente.
 	CURRENT_STEP="Copia de PS4 & PS5 sin límite de borrados"
 	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
@@ -162,6 +169,7 @@ ejecutar_rsync_con_reintentos() {
 	else
 		return "$?"
 	fi
+	mac_mirror_copiar_recovery || return "$?"
 	CURRENT_STEP="Copia del resto del espejo, cupo diario de borrados"
 	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
 	if mac_mirror_copiar "$SOURCE_DIR" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" "${otros[@]}" "--max-delete=$quota"; then
@@ -178,7 +186,7 @@ case "${1:-}" in
 	DRY_RUN=(--dry-run)
 	;;
 --allow-large-delete)
-	echo "ℹ️ --allow-large-delete no elimina el máximo diario de 50 fuera de PS4 & PS5."
+	echo "ℹ️ --allow-large-delete no elimina el máximo diario de 50 fuera de PS4 & PS5 y del repositorio cifrado de recuperación."
 	ALLOW_LARGE_DELETE=0
 	;;
 *)
@@ -210,14 +218,19 @@ exec 9>"$LOCK_FILE"
 flock -n 9 ||
 	mostrar_error "Ya hay una copia al Mac en curso"
 
+# Evitar cambios de Restic mientras se copia el repositorio al Mac.
+exec 7>/run/lock/fumetaos-recovery-backup.lock
+flock -n 7 ||
+    mostrar_error "La copia o verificación cifrada está en curso; no se inicia el espejo"
+
 mac_mirror_crear_ssh_command
 
 trap manejar_error ERR
 
 echo "💾 Copia espejo de /mnt/datos al Mac"
 echo "📍 Destino: $MAC_DESTINATION"
-echo "🛡️ Límite diario fuera de PS4 & PS5: $DELETE_LIMIT"
-echo "ℹ️ Dos grupos: PS4 & PS5 exenta y resto limitado; sin reintentos automáticos."
+echo "🛡️ Límite diario fuera de PS4 & PS5 y del repositorio cifrado de recuperación: $DELETE_LIMIT"
+echo "ℹ️ Tres grupos: PS4 & PS5 y repositorio cifrado exentos; resto limitado; sin reintentos automáticos."
 echo
 
 # FUMETAOS_GENERAL_MAC_SESSION_V1

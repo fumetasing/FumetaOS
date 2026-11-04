@@ -1,5 +1,13 @@
 # FumetaOS Changelog
 
+## v2.4.37
+
+### Changed
+
+- El espejo al Mac sincroniza por separado el repositorio cifrado de recuperación, fuera del cupo de borrados.
+- El resto conserva el máximo persistente de 50 borrados diarios. PS4 & PS5 mantiene su exención.
+- Se valida el repositorio de destino y se comparte el bloqueo de Restic durante el espejo.
+
 ## v2.4.36
 
 ### Changed
