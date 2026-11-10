@@ -1,5 +1,9 @@
 # FumetaOS Changelog
 
+## v2.4.39
+
+- El informe distingue en amarillo las aplicaciones cuyo healthcheck de Docker todavía está en curso.
+
 ## v2.4.38
 
 - El monitor de FileZilla reconoce las imágenes oficiales de LinuxServer en lscr.io y compara el manifiesto instalado con las variantes del índice remoto.

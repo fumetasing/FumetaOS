@@ -187,6 +187,7 @@ app_health() {
 	local container
 	local health
 	local has_healthcheck=0
+	local is_starting=0
 	local response
 	local status
 
@@ -237,9 +238,15 @@ app_health() {
 		if [ "$health" = "healthy" ]; then
 			has_healthcheck=1
 		fi
+
+		if [ "$health" = "starting" ]; then
+			is_starting=1
+		fi
 	done <<<"${PROJECT_CONTAINERS[$project]-}"
 
-	if [ "$has_healthcheck" -eq 1 ]; then
+	if [ "$is_starting" -eq 1 ]; then
+		echo "starting"
+	elif [ "$has_healthcheck" -eq 1 ]; then
 		echo "healthy"
 	else
 		echo "none"
@@ -306,7 +313,8 @@ for PROJECT in "${PROJECTS[@]}"; do
 
 	if [ "$CONTAINERS" -gt 0 ] &&
 		[ "$RUNNING" -eq "$CONTAINERS" ] &&
-		[ "$HEALTH" != "unhealthy" ]; then
+		[ "$HEALTH" != "unhealthy" ] &&
+		[ "$HEALTH" != "starting" ]; then
 		ACTIVE=$((ACTIVE + 1))
 	else
 		FAILED=$((FAILED + 1))
@@ -330,7 +338,11 @@ for PROJECT in "${PROJECTS[@]}"; do
 
 	if [ "$CONTAINERS" -gt 0 ] &&
 		[ "$RUNNING" -eq "$CONTAINERS" ]; then
-		echo "🟢 $NAME"
+		if [ "$HEALTH" = "starting" ]; then
+			echo "🟡 $NAME"
+		else
+			echo "🟢 $NAME"
+		fi
 
 		if [ -n "$DESCRIPTION" ]; then
 			echo "   $DESCRIPTION"
@@ -345,6 +357,9 @@ for PROJECT in "${PROJECTS[@]}"; do
 		fi
 
 		case "$HEALTH" in
+		starting)
+			echo "   Health: 🟡 Arrancando; comprobación en curso"
+			;;
 		healthy)
 			echo "   Health: 🟢 healthy"
 			;;
