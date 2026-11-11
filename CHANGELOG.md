@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.43
+
+- El respaldo previo del actualizador incluye los archivos reales de las rutas enlazadas y conserva los enlaces internos.
+- Las dos copias se comprueban antes de guardarlas con permisos 0600. Si falla la creación de la segunda copia, se limpian los archivos temporales.
+
 ## v2.4.42
 
 - El constructor prepara el paquete completo antes de sustituir el anterior.
