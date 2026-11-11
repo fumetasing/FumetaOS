@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import stat
 import subprocess
 import tempfile
 import unittest
@@ -54,6 +55,9 @@ class PackageBuilderTests(unittest.TestCase):
         (self.source / "bin/fumetaos").write_text("nuevo\n")
         (self.source / "sudoers/example").touch()
         (self.source / "VERSION").write_text("2.4.41\n")
+        config = self.source / "config/fumetaos.conf"
+        config.write_text("# prueba\n")
+        config.chmod(0o644)
         (self.source / "core/package-path-exchange.py").write_bytes(
             (BUILDER.parent.parent / "core/package-path-exchange.py").read_bytes()
         )
@@ -90,6 +94,8 @@ class PackageBuilderTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertEqual((self.package / "VERSION").read_text(), "2.4.41\n")
         self.assertTrue((self.package / "install/update.sh").is_file())
+        config = self.package / "config/fumetaos.conf"
+        self.assertEqual(stat.S_IMODE(config.stat().st_mode), 0o640)
         self.assertTrue(all((self.package / name).is_dir() for name in DIRECTORIES))
 
     def test_rebuild_replaces_managed_files_and_preserves_other_files(self):

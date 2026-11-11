@@ -261,3 +261,26 @@ crear_backup_previo
         result = self.run_script('bash "$TEST_BASE/install/install.sh" --check')
         self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
         self.assertIn("configuración existente", result.stderr)
+
+    def test_installer_copies_private_config_with_restricted_permissions(self):
+        package_config = self.package / "config/fumetaos.conf"
+        package_config.chmod(0o644)
+        (self.package / "config/.example").write_text("archivo auxiliar\n")
+        result = self.run_script("""
+source "$TEST_BASE/install/install.sh"
+install() {
+    if [[ "$1 $2 $3 $4 $5 $6 $7 $8" != "-D -o root -g server -m 640 --" ]]; then
+        return 99
+    fi
+    shift 8
+    command install -D -m 640 -- "$@"
+}
+umask 022
+copiar_configuracion
+""")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        installed = self.base / "config/fumetaos.conf"
+        self.assertEqual(installed.read_bytes(), package_config.read_bytes())
+        self.assertEqual(stat.S_IMODE(installed.stat().st_mode), 0o640)
+        self.assertTrue((self.base / "config/.example").is_file())
+        self.assertTrue((self.base / "config/systemd/journald.conf.d/90-fumetaos.conf").is_file())

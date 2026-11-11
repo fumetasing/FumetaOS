@@ -78,6 +78,18 @@ validar_configuracion_instalacion() {
 	return 20
 }
 
+copiar_configuracion() (
+	shopt -s dotglob nullglob
+	local archivo
+
+	install -D -o root -g server -m 640 -- \
+		"$PACKAGE/config/fumetaos.conf" "$BASE/config/fumetaos.conf"
+	for archivo in "$PACKAGE/config/"*; do
+		[[ "${archivo##*/}" != fumetaos.conf ]] || continue
+		cp -r -- "$archivo" "$BASE/config/"
+	done
+)
+
 simular() {
 	echo
 	echo "🧪 Modo simulación"
@@ -179,7 +191,7 @@ instalar() {
 
 	if [ ! -f "$BASE/config/fumetaos.conf" ]; then
 		echo "📦 Copiando configuración"
-		cp -r "$PACKAGE/config" "$BASE/"
+		copiar_configuracion
 	else
 		echo "⏭️ Conservando configuración existente"
 	fi

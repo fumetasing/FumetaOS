@@ -53,6 +53,16 @@ for directorio in "${DIRECTORIOS[@]}"; do
 	sudo cp -r -- "$SOURCE/$directorio" "$candidato/"
 done
 
+config_privada="$candidato/config/fumetaos.conf"
+if sudo test -e "$config_privada" || sudo test -L "$config_privada"; then
+	if sudo test -L "$config_privada" || ! sudo test -f "$config_privada"; then
+		echo "❌ La configuración privada del paquete debe ser un archivo regular." >&2
+		exit 20
+	fi
+	sudo chown root:server "$config_privada"
+	sudo chmod 640 "$config_privada"
+fi
+
 sudo chown -R root:root "$candidato/sudoers"
 sudo find "$candidato/sudoers" -type d -exec chmod 755 {} +
 sudo find "$candidato/sudoers" -type f -exec chmod 440 {} +
