@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.44
+
+- El instalador y el actualizador comparten la validación de los archivos y servicios requeridos del paquete.
+- Los modos `--check`, `--dry-run` y `--install` rechazan paquetes incompletos antes de aplicar cambios.
+
 ## v2.4.43
 
 - El respaldo previo del actualizador incluye los archivos reales de las rutas enlazadas y conserva los enlaces internos.
