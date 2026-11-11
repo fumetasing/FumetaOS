@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.46
+
+- El instalador requiere un `fumetaos.conf` legible y con contenido en la instalación activa o en el paquete.
+- Si falta la configuración, el instalador indica dónde prepararla a partir de `fumetaos.conf.example`. Si la configuración activa existe pero está vacía o no se puede leer, se detiene antes de aplicar cambios.
+
 ## v2.4.45
 
 - El instalador y el actualizador comparten la rutina de respaldo verificado.
