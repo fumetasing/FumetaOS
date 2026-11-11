@@ -22,6 +22,7 @@ fumetaos-timecapsule-watch.timer
 "
 
 source "$SCRIPT_DIR/../core/package-validation.sh"
+source "$SCRIPT_DIR/../core/installation-backup.sh"
 
 limpiar_backups_update() {
 	mapfile -t BACKUPS < <(
@@ -43,46 +44,10 @@ limpiar_backups_update() {
 	done
 }
 
-crear_backup() (
-	umask 077
-	local temporal copia_datos="" copia_sistema="" fecha nombre contenido archivo destino
-	mkdir -p -- "$BACKUP_DIR" "$SYSTEM_BACKUP_DIR"
-	temporal=$(mktemp -d)
-	trap 'rm -rf -- "$temporal"; rm -f -- "${copia_datos:-}" "${copia_sistema:-}"' EXIT
-
-	echo "💾 Creando backup previo..."
-	# Seguir los enlaces de entrada y conservar los que haya dentro.
-	cp -aH -- "$BASE/bin" "$BASE/core" "$BASE/modules" "$BASE/config" "$BASE/VERSION" "$temporal/"
-	fecha=$(date +%Y-%m-%d_%H-%M-%S)
-	copia_datos=$(mktemp "$BACKUP_DIR/.fumetaos-update-$fecha.XXXXXXXX")
-	nombre="${copia_datos##*/}"
-	nombre="${nombre#.}.tar.gz"
-	copia_sistema=$(mktemp "$SYSTEM_BACKUP_DIR/.$nombre.XXXXXXXX")
-
-	tar -czf "$copia_datos" -C "$temporal" bin core modules config VERSION
-	gzip -t "$copia_datos"
-	contenido=$(tar -tzf "$copia_datos")
-	for archivo in bin/fumetaos core/common.sh modules/ config/ VERSION; do
-		if ! grep -Fxq -- "$archivo" <<< "$contenido"; then
-			echo "❌ El respaldo no contiene $archivo." >&2
-			exit 20
-		fi
-	done
-
-	cp -- "$copia_datos" "$copia_sistema"
-	cmp -- "$copia_datos" "$copia_sistema"
-	chown server:server "$copia_datos" "$copia_sistema"
-	chmod 600 "$copia_datos" "$copia_sistema"
-	destino="$BACKUP_DIR/$nombre"
-	ln -T -- "$copia_datos" "$destino"
-	if ! ln -T -- "$copia_sistema" "$SYSTEM_BACKUP_DIR/$nombre"; then
-		rm -f -- "$destino"
-		exit 20
-	fi
-
+crear_backup() {
+	crear_respaldo_instalacion "$BASE" "$BACKUP_DIR" fumetaos-update "$SYSTEM_BACKUP_DIR" server:server
 	limpiar_backups_update
-	printf '✅ Backup creado: %s\n' "$destino"
-)
+}
 
 validar_paquete() {
 	local directorio

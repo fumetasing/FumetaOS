@@ -37,9 +37,8 @@ class PackageUpdaterTests(unittest.TestCase):
         for timer in timers:
             for kind in ("service", "timer"):
                 (self.package / "services" / f"fumetaos-{timer}.{kind}").write_text("[Unit]\n")
-        (self.base / "core/package-validation.sh").write_bytes(
-            (ROOT / "core/package-validation.sh").read_bytes()
-        )
+        for name in ("package-validation.sh", "installation-backup.sh"):
+            (self.base / "core" / name).write_bytes((ROOT / "core" / name).read_bytes())
         self.script = self.base / "install/update.sh"
         self.script.write_text(
             (ROOT / "install/update.sh").read_text().replace(
@@ -207,3 +206,29 @@ bash "$TEST_BASE/install/install.sh" {mode}
                 self.assertFalse((self.base / "systemctl-called").exists())
                 self.assertFalse((self.base / "data").exists())
                 self.assertEqual((self.base / "VERSION").read_text(), "2.4.41\n")
+
+    def test_installer_backups_at_the_same_time_are_private_and_distinct(self):
+        self.prepare_backup_fixture()
+        apps = self.base / "apps"
+        apps.mkdir()
+        (apps / "example").write_text("app\n")
+        result = self.run_script("""
+source "$TEST_BASE/install/install.sh"
+BACKUP_DIR="$BASE/backups-data"
+date() { echo 2026-11-11_07-00-00; }
+umask 022
+crear_backup_previo
+printf '%s\n' "nuevo" > "$BASE/config/fumetaos.conf"
+crear_backup_previo
+""")
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        archives = list((self.base / "backups-data").iterdir())
+        self.assertEqual(len(archives), 2)
+        configurations = set()
+        for path in archives:
+            self.assertTrue(path.name.startswith("fumetaos-preinstall-2026-11-11_07-00-00."))
+            self.assertEqual(stat.S_IMODE(path.stat().st_mode), 0o600)
+            with tarfile.open(path) as archive:
+                self.assertEqual(archive.extractfile("apps/example").read(), b"app\n")
+                configurations.add(archive.extractfile("config/fumetaos.conf").read())
+        self.assertEqual(configurations, {"configuración de prueba\n".encode(), b"nuevo\n"})

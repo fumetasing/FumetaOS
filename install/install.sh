@@ -23,6 +23,7 @@ fumetaos-timecapsule-watch.timer
 "
 
 source "$SCRIPT_DIR/../core/package-validation.sh"
+source "$SCRIPT_DIR/../core/installation-backup.sh"
 
 check_system() {
 	echo "🔎 Comprobando sistema..."
@@ -49,52 +50,14 @@ check_system() {
 }
 
 crear_backup_previo() {
-	if [ ! -f "$BASE/VERSION" ]; then
-		return
-	fi
-
-	echo
+	[[ -f "$BASE/VERSION" ]] || return 0
 	echo "⚠️ Instalación existente detectada"
 
-	mkdir -p "$BACKUP_DIR"
-
-	DATE=$(date +"%Y-%m-%d_%H-%M")
-	FILE="$BACKUP_DIR/fumetaos-preinstall-$DATE.tar.gz"
-
-	echo "💾 Creando backup previo..."
-
-	if [ -d "$BASE/apps" ]; then
-		if tar -czf "$FILE" \
-			-C "$BASE" \
-			bin \
-			core \
-			modules \
-			apps \
-			config \
-			VERSION; then
-			echo "✅ Backup creado:"
-			echo "$FILE"
-		else
-			echo "❌ Error creando backup"
-			exit 20
-		fi
-	else
-		if tar -czf "$FILE" \
-			-C "$BASE" \
-			bin \
-			core \
-			modules \
-			config \
-			VERSION; then
-			echo "✅ Backup creado:"
-			echo "$FILE"
-		else
-			echo "❌ Error creando backup"
-			exit 20
-		fi
+	local extras=()
+	if [[ -d "$BASE/apps" ]]; then
+		extras+=(apps)
 	fi
-
-	echo
+	crear_respaldo_instalacion "$BASE" "$BACKUP_DIR" fumetaos-preinstall "" "" "${extras[@]}"
 }
 
 simular() {
@@ -282,25 +245,27 @@ instalar() {
 	echo "✅ FumetaOS instalado correctamente"
 }
 
-case "${1:-}" in
---check|--dry-run|--install)
-	if [[ "$1" == --install ]]; then
-		exec 9<"$BASE/install"
-		flock -n 9 || {
-			echo "❌ Ya hay una operación sobre el paquete en curso." >&2
-			exit 20
-		}
-	fi
-	check_system
-	validar_contenido_paquete "$PACKAGE" $FUMETAOS_TIMERS
-	echo "✅ Paquete $FUMETAOS_VERSION validado."
-	case "$1" in
-	--dry-run) simular ;;
-	--install) instalar ;;
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	case "${1:-}" in
+	--check|--dry-run|--install)
+		if [[ "$1" == --install ]]; then
+			exec 9<"$BASE/install"
+			flock -n 9 || {
+				echo "❌ Ya hay una operación sobre el paquete en curso." >&2
+				exit 20
+			}
+		fi
+		check_system
+		validar_contenido_paquete "$PACKAGE" $FUMETAOS_TIMERS
+		echo "✅ Paquete $FUMETAOS_VERSION validado."
+		case "$1" in
+		--dry-run) simular ;;
+		--install) instalar ;;
+		esac
+		;;
+	*)
+		printf 'Uso: %s --check | --dry-run | --install\n' "$0"
+		exit 2
+		;;
 	esac
-	;;
-*)
-	printf 'Uso: %s --check | --dry-run | --install\n' "$0"
-	exit 2
-	;;
-esac
+fi
