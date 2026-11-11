@@ -1,6 +1,6 @@
 # Recuperación y migración de FumetaOS
 
-Estado de referencia: FumetasOS 2.4.39, 11/11/2026. Esta guía es un procedimiento
+Estado de referencia: FumetaOS 2.4.39, 11/11/2026. Esta guía es un procedimiento
 de planificación; no autoriza ni ejecuta una restauración en producción.
 
 Consultar también [arquitectura de FumetaOS](ARQUITECTURA.md).
@@ -40,7 +40,7 @@ final ejecuta SMART largo los lunes y SMART corto de martes a domingo.
   del servidor y del propio repositorio cifrado.
 - Caché: `/var/cache/fumetaos-restic`.
 - Metadatos: `/var/lib/fumetaos/recovery-metadata`.
-- Proyecto: `git@github.com:fumetasing/FumetasOS.git`, rama `main`.
+- Proyecto: `git@github.com:fumetasing/FumetaOS.git`, rama `main`.
 - Plataforma de restauración completa: Ubuntu Server AMD64/x86_64.
 
 El trabajo Restic incluye `/etc`, `/home/server`, `/root`, `/DATA`, `/opt/fumetaos`,

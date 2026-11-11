@@ -1,11 +1,11 @@
-# FumetaOS / FumetasOS
+# FumetaOS
 
 Framework de administración y automatización de un servidor doméstico Ubuntu,
 integrado con CasaOS, Docker, almacenamiento SMB, copias y Telegram.
 No es una distribución Linux ni sustituye a Ubuntu o CasaOS.
 
 La versión se lee de `VERSION`. El nombre utilizado en las publicaciones es
-**FumetasOS vX.Y.Z**; las rutas y comandos mantienen `fumetaos`.
+**FumetaOS vX.Y.Z**; las rutas y comandos mantienen `fumetaos`.
 
 ## Documentación actual
 
