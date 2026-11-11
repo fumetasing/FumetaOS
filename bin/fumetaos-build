@@ -2,134 +2,98 @@
 
 set -euo pipefail
 
-###########################################################
-# FumetaOS
-# Package Builder
-###########################################################
-
 SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
-
 PACKAGE="/opt/fumetaos/install/package"
+PARENT="${PACKAGE%/*}"
+DIRECTORIOS=(bin core modules apps config services sudoers)
 
-echo
-echo "🏗️ FumetaOS Package Builder"
-echo
+echo "🏗️ Construyendo paquete de FumetaOS"
+printf 'Origen: %s\nDestino: %s\n' "$SOURCE" "$PACKAGE"
 
-echo "Origen:"
-echo "$SOURCE"
+for directorio in "${DIRECTORIOS[@]}"; do
+	test -d "$SOURCE/$directorio" || {
+		echo "❌ Falta el directorio: $SOURCE/$directorio" >&2
+		exit 20
+	}
+done
+test -s "$SOURCE/VERSION"
+for archivo in install.sh update.sh; do
+	bash -n "$SOURCE/install/$archivo"
+done
+for regla in "$SOURCE/sudoers/"*; do
+	test -f "$regla"
+	sudo visudo -cf "$regla"
+done
 
-echo
-
-echo "Destino:"
-echo "$PACKAGE"
-
-echo
-
-if [ ! -d "$PACKAGE" ]; then
-
-	echo "📁 Creando paquete"
-
-	sudo mkdir -p "$PACKAGE"
-
+sudo mkdir -p -- "$PARENT"
+exec 9<"$PARENT"
+if ! flock -n 9; then
+	echo "❌ Ya hay otra construcción del paquete en curso." >&2
+	exit 20
 fi
 
-# Comprobar fuentes antes de modificar el paquete.
-for DIRECTORIO in bin core modules apps config services sudoers; do
-  test -d "$SOURCE/$DIRECTORIO" || {
-    echo "❌ Falta el directorio: $SOURCE/$DIRECTORIO"
-    exit 20
-  }
-done
-for ARCHIVO in install.sh update.sh; do
-  bash -n "$SOURCE/install/$ARCHIVO"
-done
-for REGLA in "$SOURCE/sudoers/"*; do
-  test -f "$REGLA"
-  sudo visudo -cf "$REGLA"
-done
+temporal=$(sudo mktemp -d "$PARENT/.package-build.XXXXXXXX")
+trap 'sudo rm -rf --one-file-system -- "$temporal"' EXIT
+candidato="$temporal/package"
 
-echo "🧹 Limpiando paquete anterior"
+if [[ -L "$PACKAGE" || ( -e "$PACKAGE" && ! -d "$PACKAGE" ) ]]; then
+	echo "❌ El destino del paquete no es un directorio normal." >&2
+	exit 20
+fi
 
-sudo rm -rf \
-	"$PACKAGE/bin" \
-	"$PACKAGE/core" \
-	"$PACKAGE/modules" \
-	"$PACKAGE/apps" \
-	"$PACKAGE/config" \
-	"$PACKAGE/services" \
-	"$PACKAGE/sudoers"
+# Conservar archivos ajenos al constructor, como la documentación del paquete.
+if [ -d "$PACKAGE" ]; then
+	sudo cp -a -- "$PACKAGE" "$candidato"
+else
+	sudo install -d -o root -g root -m 755 -- "$candidato"
+fi
 
-echo "📦 Copiando bin"
-
-sudo cp -r \
-	"$SOURCE/bin" \
-	"$PACKAGE/"
-
-echo "📦 Copiando core"
-
-sudo cp -r \
-	"$SOURCE/core" \
-	"$PACKAGE/"
-
-echo "📦 Copiando módulos"
-
-sudo cp -r \
-	"$SOURCE/modules" \
-	"$PACKAGE/"
-
-echo "📦 Copiando apps"
-
-sudo cp -r \
-	"$SOURCE/apps" \
-	"$PACKAGE/"
-
-echo "📦 Copiando servicios"
-
-sudo cp -r \
-	"$SOURCE/services" \
-	"$PACKAGE/"
-
-echo "📦 Copiando configuración"
-
-sudo cp -r \
-	"$SOURCE/config" \
-	"$PACKAGE/"
-
-echo "🔐 Copiando permisos limitados"
-sudo cp -r "$SOURCE/sudoers" "$PACKAGE/"
-sudo chown -R root:root "$PACKAGE/sudoers"
-sudo find "$PACKAGE/sudoers" -type d -exec chmod 755 {} +
-sudo find "$PACKAGE/sudoers" -type f -exec chmod 440 {} +
-
-echo "📦 Copiando instaladores"
-for ARCHIVO in install.sh update.sh; do
-  sudo install -D -o root -g root -m 755 \
-    "$SOURCE/install/$ARCHIVO" "$PACKAGE/install/$ARCHIVO"
+for directorio in "${DIRECTORIOS[@]}"; do
+	sudo rm -rf --one-file-system -- "$candidato/$directorio"
+	sudo cp -r -- "$SOURCE/$directorio" "$candidato/"
 done
 
-echo "🏷️ Copiando versión"
+sudo chown -R root:root "$candidato/sudoers"
+sudo find "$candidato/sudoers" -type d -exec chmod 755 {} +
+sudo find "$candidato/sudoers" -type f -exec chmod 440 {} +
+sudo chmod -R 755 "$candidato/bin" "$candidato/core" "$candidato/modules" "$candidato/apps"
+sudo find "$candidato/services" -type d -exec chmod 755 {} +
+sudo find "$candidato/services" -type f -exec chmod 644 {} +
 
-sudo cp \
-	"$SOURCE/VERSION" \
-	"$PACKAGE/VERSION"
+sudo test ! -L "$candidato/install"
+for archivo in install.sh update.sh; do
+	sudo install -D -o root -g root -m 755 -- "$SOURCE/install/$archivo" "$candidato/install/$archivo"
+	sudo bash -n "$candidato/install/$archivo"
+done
+sudo install -o root -g root -m 644 -- "$SOURCE/VERSION" "$candidato/VERSION"
+sudo cmp -- "$SOURCE/VERSION" "$candidato/VERSION"
 
-echo
+# renameat2 permite intercambiar dos directorios en una sola operación.
+# Con un destino nuevo, NOREPLACE protege contra una creación simultánea.
+sudo python3 -B - "$candidato" "$PACKAGE" <<'PYTHON'
+import ctypes
+import os
+import stat
+import sys
 
-echo "🔒 Ajustando permisos"
+source, target = sys.argv[1:]
+try:
+    target_mode = os.lstat(target).st_mode
+except FileNotFoundError:
+    flags = 1  # RENAME_NOREPLACE
+else:
+    if not stat.S_ISDIR(target_mode):
+        raise SystemExit("El destino dejó de ser un directorio normal.")
+    flags = 2  # RENAME_EXCHANGE
 
-sudo chmod -R 755 "$PACKAGE/bin"
-sudo chmod -R 755 "$PACKAGE/core"
-sudo chmod -R 755 "$PACKAGE/modules"
-sudo chmod -R 755 "$PACKAGE/apps"
-sudo find "$PACKAGE/services" -type d -exec chmod 755 {} +
-sudo find "$PACKAGE/services" -type f -exec chmod 644 {} +
-
-echo
+libc = ctypes.CDLL(None, use_errno=True)
+renameat2 = libc.renameat2
+renameat2.argtypes = (ctypes.c_int, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_uint)
+renameat2.restype = ctypes.c_int
+at_fdcwd = -100
+if renameat2(at_fdcwd, os.fsencode(source), at_fdcwd, os.fsencode(target), flags) != 0:
+    raise SystemExit(f"No se pudo publicar el paquete: {os.strerror(ctypes.get_errno())}")
+PYTHON
 
 echo "✅ Paquete generado correctamente"
-
-echo
-
 ls -la "$PACKAGE"
-
-echo
