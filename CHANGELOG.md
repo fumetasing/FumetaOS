@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.45
+
+- El instalador y el actualizador comparten la rutina de respaldo verificado.
+- Cada respaldo tiene un nombre único y permisos 0600, incluso si se generan dos en el mismo instante.
+- El actualizador verifica que las dos copias coincidan y limpia los archivos parciales si falla la segunda.
+
 ## v2.4.44
 
 - El instalador y el actualizador comparten la validación de los archivos y servicios requeridos del paquete.
