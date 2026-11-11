@@ -58,6 +58,7 @@ describen la programación activa. Consultar `systemctl list-timers --all`.
 fumetaos help
 fumetaos version
 fumetaos doctor
+fumetaos config
 fumetaos status
 fumetaos health
 fumetaos services
@@ -66,9 +67,9 @@ fumetaos app list
 ```
 
 `fumetaos report` envía Telegram: no es una consulta sin efectos.
-La entrada actual muestra `update` y `config`, pero sus ejecutables delegados
-`bin/fumetaos-update` y `bin/fumetaos-config` no existen en esta instalación.
-No asumir que esos dos comandos funcionan; revisar el procedimiento de instalación.
+`fumetaos doctor` muestra la última ejecución correcta de cada copia y de la
+verificación Restic. Usa el historial local de systemd y los mismos límites
+que el informe. `fumetaos config` muestra la ruta de la configuración.
 
 ## Construcción y despliegue
 
@@ -90,7 +91,8 @@ bash tests/test-nightly.sh
 PYTHONDONTWRITEBYTECODE=1 python3 tests/test_jellyfin_mount_guard.py
 ```
 
-El test nocturno simula systemd y valida trece escenarios, incluido el paso de
+GitHub Actions ejecuta las pruebas de Bash y Python en los cambios del
+repositorio. El test nocturno simula systemd y valida trece escenarios, incluido el paso de
 limpieza Docker. No se deben sustituir estas pruebas por iniciar la cadena real.
 `bin/fumetaos-quality` requiere Bash, Git, ShellCheck y shfmt.
 

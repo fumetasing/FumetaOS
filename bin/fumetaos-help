@@ -54,12 +54,9 @@ echo "fumetaos history"
 echo "   Historial del sistema"
 echo
 
-echo "fumetaos update"
-echo "   Actualizar FumetaOS"
-echo
 
 echo "fumetaos config"
-echo "   Configuración"
+echo "   Mostrar la ruta del archivo de configuración"
 echo
 
 echo "fumetaos help"

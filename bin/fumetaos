@@ -89,13 +89,8 @@ mostrar_help() {
 
 	echo
 
-	echo "fumetaos update"
-	echo "   Actualizar FumetaOS"
-
-	echo
-
 	echo "fumetaos config"
-	echo "   Configuración"
+	echo "   Mostrar la ruta del archivo de configuración"
 
 	echo
 
@@ -174,12 +169,14 @@ history)
 
 update)
 
-	exec "$BIN_DIR/fumetaos-update"
+	printf "%s\n" "Las actualizaciones se aplican desde un paquete preparado con install/update.sh. Consulta la sección Construcción y despliegue del README." >&2
+	exit 2
 	;;
 
 config)
 
-	exec "$BIN_DIR/fumetaos-config"
+	printf "%s\n" "$CONFIG_FILE"
+	[ -f "$CONFIG_FILE" ]
 	;;
 
 help | "")

@@ -173,7 +173,8 @@ echo
 echo "💾 Datos"
 echo
 
-check "Backup disponible" backup_disponible
+check "Archivo de copia local disponible" backup_disponible
+check "Copias y verificación al día" bash "$MODULES_DIR/monitor/backups.sh" --solo-historial
 check "Histórico funcionando" test -s "$DATA_DIR/history.log"
 
 echo

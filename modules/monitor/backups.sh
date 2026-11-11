@@ -4,7 +4,18 @@
 # FumetaOS - Monitor de copias (solo consulta)
 ###########################################################
 
-source "$(dirname "${BASH_SOURCE[0]}")/../../core/mac-mirror-common.sh"
+case "$#:${1:-}" in
+0:) ;;
+1:--solo-historial) ;;
+*)
+	printf 'Uso: %s [--solo-historial]\n' "${0##*/}" >&2
+	exit 2
+	;;
+esac
+
+if [ "$#" -eq 0 ]; then
+	source "$(dirname "${BASH_SOURCE[0]}")/../../core/mac-mirror-common.sh"
+fi
 
 ERROR=0
 NOW=$(date +%s)
@@ -455,8 +466,10 @@ for timer in "${TIMERS[@]}"; do
 	leer_timer "$timer"
 done
 
-echo
-mostrar_usb
+if [ "$#" -eq 0 ]; then
+	echo
+	mostrar_usb
+fi
 
 echo
 mostrar_copia \
