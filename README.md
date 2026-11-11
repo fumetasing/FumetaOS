@@ -85,6 +85,11 @@ Usa `sudo /opt/fumetaos/install/package/install/update.sh --check` para comproba
 la compatibilidad del paquete con la instalación. Si una ruta activa enlaza al
 proyecto, la comprobación exige que coincida con el paquete antes de actualizar.
 
+Para una instalación inicial, prepara `fumetaos.conf` a partir de
+`fumetaos.conf.example` en `/opt/fumetaos/config/` o en `config/` dentro del
+paquete. El instalador conserva la configuración existente y requiere que
+sea legible y tenga contenido.
+
 Estos procesos pueden copiar directorios, modificar unidades y activar servicios;
 no son pruebas inocuas. Un clon del repositorio no instala por sí solo Ubuntu,
 CasaOS parcheado, credenciales, aplicaciones de CasaOS, Samba, redes o datos.

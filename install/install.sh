@@ -60,6 +60,24 @@ crear_backup_previo() {
 	crear_respaldo_instalacion "$BASE" "$BACKUP_DIR" fumetaos-preinstall "" "" "${extras[@]}"
 }
 
+validar_configuracion_instalacion() {
+	local activa="$BASE/config/fumetaos.conf"
+	local incluida="$PACKAGE/config/fumetaos.conf"
+
+	if [[ -e "$activa" || -L "$activa" ]]; then
+		if [[ -f "$activa" && -s "$activa" && -r "$activa" ]]; then
+			return 0
+		fi
+		printf '❌ Revisa %s. La configuración existente debe ser un archivo legible y no vacío.\n' "$activa" >&2
+		return 20
+	fi
+	if [[ -f "$incluida" && -s "$incluida" && -r "$incluida" ]]; then
+		return 0
+	fi
+	printf '❌ Prepara %s o %s a partir de fumetaos.conf.example antes de instalar.\n' "$activa" "$incluida" >&2
+	return 20
+}
+
 simular() {
 	echo
 	echo "🧪 Modo simulación"
@@ -257,6 +275,7 @@ if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 		fi
 		check_system
 		validar_contenido_paquete "$PACKAGE" $FUMETAOS_TIMERS
+		validar_configuracion_instalacion
 		echo "✅ Paquete $FUMETAOS_VERSION validado."
 		case "$1" in
 		--dry-run) simular ;;

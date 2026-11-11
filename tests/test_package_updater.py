@@ -31,6 +31,7 @@ class PackageUpdaterTests(unittest.TestCase):
         journal = self.package / "config/systemd/journald.conf.d/90-fumetaos.conf"
         journal.parent.mkdir(parents=True)
         journal.write_text("[Journal]\n")
+        (self.package / "config/fumetaos.conf").write_text("# configuración de prueba\n")
         (self.package / "services").mkdir()
         (self.package / "apps").mkdir()
         timers = ("watch", "history", "history-clean", "report", "nightly", "timecapsule-watch")
@@ -232,3 +233,31 @@ crear_backup_previo
                 self.assertEqual(archive.extractfile("apps/example").read(), b"app\n")
                 configurations.add(archive.extractfile("config/fumetaos.conf").read())
         self.assertEqual(configurations, {"configuración de prueba\n".encode(), b"nuevo\n"})
+
+    def test_installer_requires_effective_config_in_all_modes(self):
+        (self.package / "config/fumetaos.conf").rename(
+            self.package / "config/fumetaos.conf.example"
+        )
+        for mode in ("--check", "--dry-run", "--install"):
+            with self.subTest(mode=mode):
+                result = self.run_script(f'bash "$TEST_BASE/install/install.sh" {mode}')
+                self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
+                self.assertIn("fumetaos.conf.example", result.stderr)
+                self.assertFalse((self.base / "data").exists())
+                self.assertEqual((self.base / "VERSION").read_text(), "2.4.41\n")
+
+    def test_installer_accepts_existing_config_without_packaged_config(self):
+        (self.package / "config/fumetaos.conf").unlink()
+        config = self.base / "config/fumetaos.conf"
+        config.parent.mkdir()
+        config.write_text("# configuración existente\n")
+        result = self.run_script('bash "$TEST_BASE/install/install.sh" --check')
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_installer_rejects_empty_existing_config_it_would_preserve(self):
+        config = self.base / "config/fumetaos.conf"
+        config.parent.mkdir()
+        config.touch()
+        result = self.run_script('bash "$TEST_BASE/install/install.sh" --check')
+        self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
+        self.assertIn("configuración existente", result.stderr)
