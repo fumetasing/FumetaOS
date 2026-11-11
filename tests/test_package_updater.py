@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
+import stat
 import subprocess
+import tarfile
 import tempfile
 import unittest
 
@@ -108,3 +110,59 @@ sustituir_directorios
         self.assertIn("Revirtiendo", result.stderr)
         for directory in DIRECTORIES:
             self.assertEqual((self.base / directory / "example").read_text(), "old\n")
+
+    def prepare_backup_fixture(self):
+        for name, contents in (
+            ("bin/fumetaos", "programa\n"),
+            ("core/common.sh", "biblioteca\n"),
+            ("config/fumetaos.conf", "configuración de prueba\n"),
+        ):
+            path = self.base / name
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_text(contents)
+        (self.base / "modules/enlace-interno").symlink_to("example")
+        for name in (*DIRECTORIES, "VERSION"):
+            original = self.base / name
+            target = original.rename(self.base / f"project-{name}")
+            original.symlink_to(target)
+
+    def backup(self, fail_second_copy=False):
+        mock = """
+cp() {
+    if [[ "$1" == -- ]]; then return 73; fi
+    command cp "$@"
+}
+""" if fail_second_copy else ""
+        return self.run_script("""
+source "$1"
+BACKUP_DIR="$BASE/backups-data"
+SYSTEM_BACKUP_DIR="$BASE/backups-system"
+TMPDIR="$BASE"
+export TMPDIR
+chown() { :; }
+""" + mock + "\ncrear_backup\n")
+
+    def test_update_backup_contains_link_targets_and_has_private_permissions(self):
+        self.prepare_backup_fixture()
+        result = self.backup()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        data, = (self.base / "backups-data").iterdir()
+        system, = (self.base / "backups-system").iterdir()
+        self.assertEqual(data.name, system.name)
+        self.assertEqual(data.read_bytes(), system.read_bytes())
+        for archive in (data, system):
+            self.assertEqual(stat.S_IMODE(archive.stat().st_mode), 0o600)
+        with tarfile.open(data) as archive:
+            self.assertEqual(archive.extractfile("VERSION").read(), b"2.4.41\n")
+            self.assertEqual(archive.extractfile("bin/fumetaos").read(), b"programa\n")
+            self.assertEqual(archive.extractfile("core/common.sh").read(), b"biblioteca\n")
+            self.assertTrue(archive.getmember("modules/enlace-interno").issym())
+        self.assertEqual(list(self.base.glob("tmp.*")), [])
+
+    def test_backup_failure_leaves_no_partial_archives(self):
+        self.prepare_backup_fixture()
+        result = self.backup(fail_second_copy=True)
+        self.assertEqual(result.returncode, 73, result.stdout + result.stderr)
+        for directory in ("backups-data", "backups-system"):
+            self.assertEqual(list((self.base / directory).iterdir()), [])
+        self.assertEqual(list(self.base.glob("tmp.*")), [])
