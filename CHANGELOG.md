@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.42
+
+- El constructor prepara el paquete completo antes de sustituir el anterior.
+- El actualizador incorpora `--check` para validar el paquete y detectar discrepancias en las rutas enlazadas. Prepara los directorios físicos antes de sustituirlos y revierte los ya sustituidos si falla un intercambio.
+- Las pruebas cubren la coherencia del paquete en Doctor y los fallos del constructor y del actualizador.
+
 ## v2.4.41
 
 - `fumetaos doctor` compara la versión y los directorios `bin`, `core` y `modules` del paquete con la instalación activa.
