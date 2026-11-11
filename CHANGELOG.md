@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.47
+
+- El constructor y el instalador guardan la configuración privada con permisos 0640 y propietario root:server.
+- FumetaOS Doctor comprueba los permisos de la configuración que usa y de la copia del paquete, si existe.
+
 ## v2.4.46
 
 - El instalador requiere un `fumetaos.conf` legible y con contenido en la instalación activa o en el paquete.
