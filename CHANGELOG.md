@@ -1,5 +1,12 @@
 # FumetaOS Changelog
 
+## v2.4.40
+
+- `fumetaos doctor` muestra la última ejecución correcta de cada copia y de la verificación Restic, y avisa cuando están atrasadas.
+- GitHub Actions ejecuta las pruebas de FumetaOS al subir cambios y al abrir o actualizar solicitudes de cambio.
+- `fumetaos config` muestra la ruta de la configuración. `fumetaos update` indica cómo aplicar un paquete preparado.
+- Se actualizan el README y las guías de arquitectura y recuperación.
+
 ## v2.4.39
 
 - El informe distingue en amarillo las aplicaciones cuyo healthcheck de Docker todavía está en curso.
