@@ -81,6 +81,10 @@ que el informe. También compara la versión y los directorios `bin`, `core` y
 clonar el repositorio y ejecutar el instalador: antes debe existir un paquete
 correctamente preparado y la configuración privada correspondiente.
 
+Usa `sudo /opt/fumetaos/install/package/install/update.sh --check` para comprobar
+la compatibilidad del paquete con la instalación. Si una ruta activa enlaza al
+proyecto, la comprobación exige que coincida con el paquete antes de actualizar.
+
 Estos procesos pueden copiar directorios, modificar unidades y activar servicios;
 no son pruebas inocuas. Un clon del repositorio no instala por sí solo Ubuntu,
 CasaOS parcheado, credenciales, aplicaciones de CasaOS, Samba, redes o datos.

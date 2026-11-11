@@ -54,6 +54,9 @@ class PackageBuilderTests(unittest.TestCase):
         (self.source / "bin/fumetaos").write_text("nuevo\n")
         (self.source / "sudoers/example").touch()
         (self.source / "VERSION").write_text("2.4.41\n")
+        (self.source / "core/package-path-exchange.py").write_bytes(
+            (BUILDER.parent.parent / "core/package-path-exchange.py").read_bytes()
+        )
         for name in ("install.sh", "update.sh"):
             (self.source / "install" / name).write_text("#!/bin/bash\n")
         script = BUILDER.read_text()

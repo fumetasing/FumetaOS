@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -eo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 BASE="/opt/fumetaos"
 PACKAGE="$BASE/install/package"
 
@@ -85,24 +89,89 @@ crear_backup() {
 	echo "$FILE"
 }
 
-actualizar_directorio() {
-	SOURCE_DIR="$1"
-	DEST_DIR="$2"
-	LABEL="$3"
+validar_paquete() {
+	local directorio
+	local archivo
+	local regla
 
-	echo "📦 Actualizando $LABEL"
-
-	if [ -L "$DEST_DIR" ]; then
-		echo "ℹ️ Se conserva el enlace simbólico: $DEST_DIR -> $(readlink -f "$DEST_DIR")"
-		return 0
-	fi
-
-	rm -rf "$DEST_DIR"
-
-	cp -r "$SOURCE_DIR" "$(dirname "$DEST_DIR")/" || {
-		echo "❌ Error actualizando $LABEL"
-		exit 20
+	leer_version
+	[[ "$FUMETAOS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
+		echo "❌ La versión del paquete no es válida." >&2
+		return 20
 	}
+
+	for directorio in bin core modules services; do
+		if [[ ! -d "$PACKAGE/$directorio" || -L "$PACKAGE/$directorio" ]]; then
+			echo "❌ Falta un directorio válido en el paquete: $directorio" >&2
+			return 20
+		fi
+	done
+	for archivo in bin/fumetaos bin/fumetaos-doctor core/common.sh config/systemd/journald.conf.d/90-fumetaos.conf; do
+		if [[ ! -s "$PACKAGE/$archivo" ]]; then
+			echo "❌ Falta un archivo del paquete: $archivo" >&2
+			return 20
+		fi
+	done
+	if [[ ! -x "$PACKAGE/bin/fumetaos" || ! -x "$PACKAGE/bin/fumetaos-doctor" ]]; then
+		echo "❌ Los comandos del paquete deben ser ejecutables." >&2
+		return 20
+	fi
+	bash -n "$PACKAGE/bin/fumetaos"
+	bash -n "$PACKAGE/bin/fumetaos-doctor"
+	bash -n "$PACKAGE/core/common.sh"
+
+	if [[ -L "$BASE/VERSION" ]] && ! cmp -s -- "$BASE/VERSION" "$PACKAGE/VERSION"; then
+		echo "❌ VERSION está enlazada al proyecto y difiere del paquete." >&2
+		return 20
+	fi
+	for directorio in bin core modules; do
+		if [[ -L "$BASE/$directorio" ]]; then
+			if ! diff -qr -- "$BASE/$directorio" "$PACKAGE/$directorio"; then
+				echo "❌ El directorio enlazado $directorio difiere del paquete." >&2
+				return 20
+			fi
+		elif [[ ! -d "$BASE/$directorio" ]]; then
+			echo "❌ Falta el directorio de la instalación: $directorio" >&2
+			return 20
+		fi
+	done
+
+	if [[ -d "$PACKAGE/sudoers" ]]; then
+		while IFS= read -r -d "" regla; do
+			visudo -cf "$regla" >/dev/null || return 20
+		done < <(find "$PACKAGE/sudoers" -maxdepth 1 -type f -print0)
+	fi
+}
+
+preparar_directorios() {
+	local directorio
+	for directorio in bin core modules; do
+		[[ ! -L "$BASE/$directorio" ]] || continue
+		cp -r -- "$PACKAGE/$directorio" "$TEMPORAL/$directorio" || return 20
+	done
+}
+
+sustituir_directorios() {
+	local directorio
+	local aplicado
+	local aplicados=()
+
+	for directorio in bin core modules; do
+		[[ -d "$TEMPORAL/$directorio" ]] || continue
+		if [[ -L "$BASE/$directorio" || ! -d "$BASE/$directorio" ]] ||
+			! python3 -B "$TEMPORAL/package-path-exchange.py" "$TEMPORAL/$directorio" "$BASE/$directorio"; then
+			echo "❌ No se pudo sustituir $directorio. Revirtiendo los directorios ya sustituidos." >&2
+			for aplicado in "${aplicados[@]}"; do
+				if ! python3 -B "$TEMPORAL/package-path-exchange.py" "$TEMPORAL/$aplicado" "$BASE/$aplicado"; then
+					trap - EXIT
+					echo "❌ Reversión incompleta. Se conserva el directorio $TEMPORAL." >&2
+					return 20
+				fi
+			done
+			return 20
+		fi
+		aplicados+=("$directorio")
+	done
 }
 
 configurar_journald() {
@@ -133,28 +202,31 @@ actualizar() {
 	echo "🔄 FumetaOS Update"
 	echo
 
-	leer_version
-
-	echo "Versión destino: $FUMETAOS_VERSION"
-	echo
-
-	[ -d "$PACKAGE" ] || {
-		echo "❌ Paquete no encontrado"
+	if [[ "$EUID" -ne 0 ]]; then
+		echo "❌ Ejecuta el instalador con sudo." >&2
+		exit 20
+	fi
+	exec 9<"$BASE/install"
+	flock -n 9 || {
+		echo "❌ Ya hay una construcción o actualización del paquete en curso." >&2
 		exit 20
 	}
+	validar_paquete
+	echo "Versión destino: $FUMETAOS_VERSION"
+
+	TEMPORAL=$(mktemp -d "$BASE/.update.XXXXXXXX")
+	trap 'rm -rf --one-file-system -- "$TEMPORAL"' EXIT
+	cp -- "$SCRIPT_DIR/../core/package-path-exchange.py" "$TEMPORAL/package-path-exchange.py"
+	preparar_directorios
 
 	crear_backup
+	sustituir_directorios
 	configurar_journald
-
-	actualizar_directorio "$PACKAGE/bin" "$BASE/bin" "binarios"
-	actualizar_directorio "$PACKAGE/core" "$BASE/core" "core"
-	actualizar_directorio "$PACKAGE/modules" "$BASE/modules" "módulos"
 
 	if [ -d "$PACKAGE/sudoers" ]; then
 		echo "🔐 Instalando permisos limitados"
 		find "$PACKAGE/sudoers" -maxdepth 1 -type f -print0 |
 			while IFS= read -r -d "" REGLA_SUDOERS; do
-				visudo -cf "$REGLA_SUDOERS" >/dev/null
 				install -m 440 "$REGLA_SUDOERS" "/etc/sudoers.d/$(basename "$REGLA_SUDOERS")"
 			done
 	fi
@@ -218,7 +290,9 @@ actualizar() {
 
 	echo
 	echo "🏷️ Actualizando versión"
-	echo "$FUMETAOS_VERSION" >"$BASE/VERSION"
+	if [[ ! -L "$BASE/VERSION" ]]; then
+		install -m 644 -- "$PACKAGE/VERSION" "$BASE/VERSION"
+	fi
 
 	echo
 	echo "🩺 Ejecutando Doctor"
@@ -235,15 +309,18 @@ actualizar() {
 	echo "✅ Actualización completada"
 }
 
-case "$1" in
---update)
-	actualizar
-	;;
-*)
-	echo
-	echo "Uso:"
-	echo
-	echo "fumetaos update"
-	echo
-	;;
-esac
+if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
+	case "${1:-}" in
+	--update)
+		actualizar
+		;;
+	--check)
+		validar_paquete
+		echo "✅ Paquete e instalación compatibles para actualizar a $FUMETAOS_VERSION."
+		;;
+	*)
+		printf 'Uso: %s --check | --update\n' "$0"
+		exit 2
+		;;
+	esac
+fi
