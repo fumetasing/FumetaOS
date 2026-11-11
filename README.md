@@ -1,129 +1,110 @@
-# 🖥️ FumetaOS
+# FumetaOS / FumetasOS
 
-> Framework de administración para servidores Linux.
+Framework de administración y automatización de un servidor doméstico Ubuntu,
+integrado con CasaOS, Docker, almacenamiento SMB, copias y Telegram.
+No es una distribución Linux ni sustituye a Ubuntu o CasaOS.
 
-FumetaOS es un framework de administración diseñado para simplificar la gestión de servidores Linux mediante una única interfaz de línea de comandos.
+La versión se lee de `VERSION`. El nombre utilizado en las publicaciones es
+**FumetasOS vX.Y.Z**; las rutas y comandos mantienen `fumetaos`.
 
-Actualmente está orientado a servidores domésticos y pequeños servidores profesionales basados en Ubuntu.
+## Documentación actual
 
----
+- [Arquitectura de FumetaOS](docs/ARQUITECTURA.md).
+- [Recuperación y migración](docs/RECUPERACION.md).
+- [Historial de cambios](CHANGELOG.md).
 
-## Características
+La guía describe el código y las dependencias. El inventario de cada servidor
+se conserva por separado.
 
-- 🩺 Diagnóstico del sistema
-- 📊 Estado del servidor
-- ❤️ Monitorización de recursos
-- 👀 Vigilancia automática
-- 📜 Histórico de eventos
-- 💾 Copias de seguridad
-- 📦 Gestión de aplicaciones Docker
-- 🔔 Notificaciones mediante Telegram
-- 🔄 Sistema de actualización integrado
+## Componentes
 
----
+- `bin/`: interfaz y tareas de operación.
+- `core/`: configuración común, servicios, aplicaciones, eventos y sesiones SSH.
+- `modules/monitor/`: comprobaciones que alimentan el informe de salud.
+- `apps/`: definiciones históricas de Jellyfin y Transmission; **no son los
+  Compose de producción actuales**. No usarlas para recrear los contenedores sin
+  revisar sus rutas, imagen y puertos.
+- `services/`: unidades y timers de systemd.
+- `install/`: instalación y actualización desde el paquete preparado.
+- `config/`: estructura y ejemplos; la configuración efectiva está en
+  `/opt/fumetaos/config` y puede contener secretos.
+- `sudoers/`: permisos limitados para consultas concretas.
+- `tests/`: pruebas aisladas, sin iniciar copias reales.
 
-## Requisitos
+En una instalación de desarrollo, `/opt/fumetaos/{bin,core,modules,apps,VERSION}` pueden ser enlaces al
+repositorio de trabajo. **No borrar ni mover el proyecto sin
+desacoplar primero esos enlaces.** La configuración y el paquete son independientes.
 
-- Ubuntu Server
-- systemd
-- Docker
-- Docker Compose
+## Programación efectiva de esta instalación
 
----
+Zona horaria: Europe/Madrid.
 
-## Instalación
+- Cadena nocturna a las 00:30: copia local → Time Capsule al Mac → recuperación
+  cifrada y VM → espejo general al Mac → actualización de Ubuntu → limpieza Docker.
+- Verificación Restic los lunes o recuperación de una cita semanal perdida.
+- SMART de HDD y SSD al final de la cadena: corto de martes a domingo y largo los lunes,
+  después de la verificación cifrada; sin cita mensual ni hora independiente.
+- Informes Telegram a las 07:00 y 21:30 mediante un override de systemd.
+- Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;
+  retirada de torrents terminados e inactivos cada 5; limpieza de histórico a las 02:00.
 
-Actualmente la instalación se realiza mediante:
+Los antiguos timers separados de copias, APT, verificación y SMART están
+desactivados en favor de la cadena. Sus horarios escritos en los archivos no
+describen la programación activa. Consultar `systemctl list-timers --all`.
+
+## Comandos principales
 
 ```bash
-sudo ./install/install.sh
-```
-
----
-
-## Comandos disponibles
-
-```bash
-fumetaos
-
+fumetaos help
+fumetaos version
 fumetaos doctor
 fumetaos status
 fumetaos health
-fumetaos watch
+fumetaos services
 fumetaos history
-fumetaos backup
-fumetaos version
-
 fumetaos app list
 ```
 
----
+`fumetaos report` envía Telegram: no es una consulta sin efectos.
+La entrada actual muestra `update` y `config`, pero sus ejecutables delegados
+`bin/fumetaos-update` y `bin/fumetaos-config` no existen en esta instalación.
+No asumir que esos dos comandos funcionan; revisar el procedimiento de instalación.
 
-## Filosofía
+## Construcción y despliegue
 
-FumetaOS se basa en cinco principios fundamentales:
+`bin/fumetaos-build` prepara `/opt/fumetaos/install/package` a partir del proyecto.
+`install/install.sh` y `install/update.sh` consumen ese paquete. No basta con
+clonar el repositorio y ejecutar el instalador: antes debe existir un paquete
+correctamente preparado y la configuración privada correspondiente.
 
-- Simplicidad
-- Modularidad
-- Seguridad
-- Automatización
-- Mantenibilidad
+Estos procesos pueden copiar directorios, modificar unidades y activar servicios;
+no son pruebas inocuas. Un clon del repositorio no instala por sí solo Ubuntu,
+CasaOS parcheado, credenciales, aplicaciones de CasaOS, Samba, redes o datos.
 
----
+## Pruebas
 
-## Arquitectura
-
-```text
-Repositorio Git
-        │
-        ▼
-install.sh
-        │
-        ▼
-/opt/fumetaos
-        │
-        ▼
-Servidor
+```bash
+bash -n bin/fumetaos-nightly
+bash -n core/mac-mirror-common.sh
+bash tests/test-nightly.sh
+PYTHONDONTWRITEBYTECODE=1 python3 tests/test_jellyfin_mount_guard.py
 ```
 
----
+El test nocturno simula systemd y valida trece escenarios, incluido el paso de
+limpieza Docker. No se deben sustituir estas pruebas por iniciar la cadena real.
+`bin/fumetaos-quality` requiere Bash, Git, ShellCheck y shfmt.
 
-## Roadmap
+## Seguridad y recuperación
 
-### Versión 2.3
+Nunca publicar tokens de Telegram, contraseña Restic, claves SSH, configuraciones
+completas de contenedores o credenciales SMB. Restaurar primero en una ubicación
+aislada y revisar propietarios, rutas, arquitectura y redes antes de arrancar.
 
-- Gestor de aplicaciones
-- Integración con Docker Compose
-- Nueva arquitectura basada en Git
-
-### Versión 2.4
-
-- Gestión de red
-- Firewall
-- DNS
-
-### Versión 2.5
-
-- Gestión avanzada del almacenamiento
-- Snapshots
-- SMART avanzado
-
-### Versión 3.0
-
-- Interfaz Web
-
----
+El README y la guía antigua mencionaban recuperación a las 04:00, una rama
+`feature/system-manager-v2` y AFP como montaje principal. La instalación actual
+utiliza la cadena de las 00:30, la rama `main` y SMB 3.1.1 para Time Capsule.
 
 ## Licencia
 
-MIT License
-
----
-
-**Desarrollado por Fumeta.**
-
-## Pruebas SMART en la cadena nocturna
-
-Desde v2.4.36, HDD y SSD ejecutan una prueba corta de martes a domingo y una larga los lunes, al terminar la cadena nocturna y después de la verificación cifrada cuando corresponde. No hay hora independiente ni cita larga mensual.
-
-Consulta [el calendario y los detalles de SMART](docs/SMART-AL-FINAL-DE-LA-CADENA.md). En instalaciones con pruebas programadas adicionalmente en smartd, retira esa programación para evitar duplicados y conserva su vigilancia continua.
+MIT, según la declaración del proyecto. Conservar los avisos de licencia de las
+dependencias y de cualquier componente reconstruido por separado.
