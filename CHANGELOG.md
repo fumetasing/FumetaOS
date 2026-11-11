@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.41
+
+- `fumetaos doctor` compara la versión y los directorios `bin`, `core` y `modules` del paquete con la instalación activa.
+- Cuatro pruebas cubren la antigüedad de las copias, la consulta del historial y la verificación cifrada.
+- GitHub Actions usa Ubuntu 26.04 y `actions/checkout` v7.0.1 con Node.js 24.
+
 ## v2.4.40
 
 - `fumetaos doctor` muestra la última ejecución correcta de cada copia y de la verificación Restic, y avisa cuando están atrasadas.
