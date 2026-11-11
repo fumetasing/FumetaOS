@@ -162,10 +162,10 @@ echo
 echo "📦 Paquete"
 echo
 
-check "Paquete VERSION" test -f "$PACKAGE_DIR/VERSION"
-check "Paquete bin" test -d "$PACKAGE_DIR/bin"
-check "Paquete core" test -d "$PACKAGE_DIR/core"
-check "Paquete modules" test -d "$PACKAGE_DIR/modules"
+check "Versión del paquete coincide con la instalación" cmp -s -- "$VERSION_FILE" "$PACKAGE_DIR/VERSION"
+check "Paquete bin sincronizado" diff -qr -- "$BIN_DIR" "$PACKAGE_DIR/bin"
+check "Paquete core sincronizado" diff -qr -- "$CORE_DIR" "$PACKAGE_DIR/core"
+check "Paquete modules sincronizado" diff -qr -- "$MODULES_DIR" "$PACKAGE_DIR/modules"
 check "Paquete services" test -d "$PACKAGE_DIR/services"
 check "Paquete sudoers" test -d "$PACKAGE_DIR/sudoers"
 

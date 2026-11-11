@@ -69,7 +69,10 @@ fumetaos app list
 `fumetaos report` envía Telegram: no es una consulta sin efectos.
 `fumetaos doctor` muestra la última ejecución correcta de cada copia y de la
 verificación Restic. Usa el historial local de systemd y los mismos límites
-que el informe. `fumetaos config` muestra la ruta de la configuración.
+que el informe. También compara la versión y los directorios `bin`, `core` y
+`modules` del paquete con la instalación activa.
+
+`fumetaos config` muestra la ruta de la configuración.
 
 ## Construcción y despliegue
 
