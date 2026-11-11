@@ -32,6 +32,14 @@ class PackageUpdaterTests(unittest.TestCase):
         journal.parent.mkdir(parents=True)
         journal.write_text("[Journal]\n")
         (self.package / "services").mkdir()
+        (self.package / "apps").mkdir()
+        timers = ("watch", "history", "history-clean", "report", "nightly", "timecapsule-watch")
+        for timer in timers:
+            for kind in ("service", "timer"):
+                (self.package / "services" / f"fumetaos-{timer}.{kind}").write_text("[Unit]\n")
+        (self.base / "core/package-validation.sh").write_bytes(
+            (ROOT / "core/package-validation.sh").read_bytes()
+        )
         self.script = self.base / "install/update.sh"
         self.script.write_text(
             (ROOT / "install/update.sh").read_text().replace(
@@ -39,6 +47,13 @@ class PackageUpdaterTests(unittest.TestCase):
             )
         )
         self.exchange = ROOT / "core/package-path-exchange.py"
+        self.installer = self.base / "install/install.sh"
+        self.installer.write_text(
+            (ROOT / "install/install.sh").read_text().replace(
+                'BASE="/opt/fumetaos"', 'BASE="$TEST_BASE"'
+            )
+        )
+
 
     def run_script(self, command):
         return subprocess.run(
@@ -166,3 +181,29 @@ chown() { :; }
         for directory in ("backups-data", "backups-system"):
             self.assertEqual(list((self.base / directory).iterdir()), [])
         self.assertEqual(list(self.base.glob("tmp.*")), [])
+
+    def test_installer_check_and_dry_run_accept_complete_package(self):
+        for mode in ("--check", "--dry-run"):
+            with self.subTest(mode=mode):
+                result = self.run_script(f'bash "$TEST_BASE/install/install.sh" {mode}')
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                self.assertIn("Paquete 2.4.42 validado", result.stdout)
+                self.assertFalse((self.base / "data").exists())
+
+    def test_installer_modes_reject_missing_unit_before_system_changes(self):
+        (self.package / "services/fumetaos-nightly.service").unlink()
+        for mode in ("--check", "--dry-run", "--install"):
+            with self.subTest(mode=mode):
+                result = self.run_script(f"""
+systemctl() {{
+    printf "unexpected" > "$TEST_BASE/systemctl-called"
+    return 99
+}}
+export -f systemctl
+bash "$TEST_BASE/install/install.sh" {mode}
+""")
+                self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
+                self.assertIn("fumetaos-nightly.service", result.stderr)
+                self.assertFalse((self.base / "systemctl-called").exists())
+                self.assertFalse((self.base / "data").exists())
+                self.assertEqual((self.base / "VERSION").read_text(), "2.4.41\n")

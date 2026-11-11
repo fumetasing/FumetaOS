@@ -1,5 +1,9 @@
 #!/bin/bash
 
+set -eo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
 ###########################################################
 # FumetaOS
 # Installer
@@ -18,23 +22,7 @@ fumetaos-nightly.timer
 fumetaos-timecapsule-watch.timer
 "
 
-leer_version() {
-	if [ -f "$PACKAGE/VERSION" ]; then
-		FUMETAOS_VERSION=$(cat "$PACKAGE/VERSION")
-	else
-		echo "❌ No existe versión en paquete"
-		exit 20
-	fi
-}
-
-echo
-echo "🖥️ FumetaOS Installer"
-echo
-
-leer_version
-
-echo "Versión instalador: $FUMETAOS_VERSION"
-echo
+source "$SCRIPT_DIR/../core/package-validation.sh"
 
 check_system() {
 	echo "🔎 Comprobando sistema..."
@@ -179,10 +167,17 @@ instalar() {
 	echo "🚀 Instalando FumetaOS $FUMETAOS_VERSION"
 	echo
 
-	if [ ! -d "$PACKAGE" ]; then
-		echo "❌ Paquete no encontrado"
+	local ruta
+	if [[ "$EUID" -ne 0 ]]; then
+		echo "❌ Ejecuta el instalador con sudo." >&2
 		exit 20
 	fi
+	for ruta in bin core modules apps config VERSION; do
+		if [[ -L "$BASE/$ruta" ]]; then
+			echo "❌ La ruta $ruta está enlazada. Usa el procedimiento de actualización." >&2
+			exit 20
+		fi
+	done
 
 	crear_backup_previo
 	configurar_journald
@@ -212,7 +207,6 @@ instalar() {
 		echo "🔐 Instalando permisos limitados"
 		find "$PACKAGE/sudoers" -maxdepth 1 -type f -print0 |
 			while IFS= read -r -d "" REGLA_SUDOERS; do
-				visudo -cf "$REGLA_SUDOERS" >/dev/null
 				install -m 440 "$REGLA_SUDOERS" "/etc/sudoers.d/$(basename "$REGLA_SUDOERS")"
 			done
 	fi
@@ -288,25 +282,25 @@ instalar() {
 	echo "✅ FumetaOS instalado correctamente"
 }
 
-case "$1" in
---check)
+case "${1:-}" in
+--check|--dry-run|--install)
+	if [[ "$1" == --install ]]; then
+		exec 9<"$BASE/install"
+		flock -n 9 || {
+			echo "❌ Ya hay una operación sobre el paquete en curso." >&2
+			exit 20
+		}
+	fi
 	check_system
-	;;
---dry-run)
-	check_system
-	simular
-	;;
---install)
-	check_system
-	instalar
+	validar_contenido_paquete "$PACKAGE" $FUMETAOS_TIMERS
+	echo "✅ Paquete $FUMETAOS_VERSION validado."
+	case "$1" in
+	--dry-run) simular ;;
+	--install) instalar ;;
+	esac
 	;;
 *)
-	echo
-	echo "Uso:"
-	echo
-	echo "fumetaos installer --check"
-	echo "fumetaos installer --dry-run"
-	echo "fumetaos installer --install"
-	echo
+	printf 'Uso: %s --check | --dry-run | --install\n' "$0"
+	exit 2
 	;;
 esac

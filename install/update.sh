@@ -21,14 +21,7 @@ fumetaos-nightly.timer
 fumetaos-timecapsule-watch.timer
 "
 
-leer_version() {
-	[ -f "$PACKAGE/VERSION" ] || {
-		echo "❌ No existe versión en paquete"
-		exit 20
-	}
-
-	FUMETAOS_VERSION=$(cat "$PACKAGE/VERSION")
-}
+source "$SCRIPT_DIR/../core/package-validation.sh"
 
 limpiar_backups_update() {
 	mapfile -t BACKUPS < <(
@@ -93,34 +86,7 @@ crear_backup() (
 
 validar_paquete() {
 	local directorio
-	local archivo
-	local regla
-
-	leer_version
-	[[ "$FUMETAOS_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || {
-		echo "❌ La versión del paquete no es válida." >&2
-		return 20
-	}
-
-	for directorio in bin core modules services; do
-		if [[ ! -d "$PACKAGE/$directorio" || -L "$PACKAGE/$directorio" ]]; then
-			echo "❌ Falta un directorio válido en el paquete: $directorio" >&2
-			return 20
-		fi
-	done
-	for archivo in bin/fumetaos bin/fumetaos-doctor core/common.sh config/systemd/journald.conf.d/90-fumetaos.conf; do
-		if [[ ! -s "$PACKAGE/$archivo" ]]; then
-			echo "❌ Falta un archivo del paquete: $archivo" >&2
-			return 20
-		fi
-	done
-	if [[ ! -x "$PACKAGE/bin/fumetaos" || ! -x "$PACKAGE/bin/fumetaos-doctor" ]]; then
-		echo "❌ Los comandos del paquete deben ser ejecutables." >&2
-		return 20
-	fi
-	bash -n "$PACKAGE/bin/fumetaos"
-	bash -n "$PACKAGE/bin/fumetaos-doctor"
-	bash -n "$PACKAGE/core/common.sh"
+	validar_contenido_paquete "$PACKAGE" $FUMETAOS_TIMERS
 
 	if [[ -L "$BASE/VERSION" ]] && ! cmp -s -- "$BASE/VERSION" "$PACKAGE/VERSION"; then
 		echo "❌ VERSION está enlazada al proyecto y difiere del paquete." >&2
@@ -138,11 +104,6 @@ validar_paquete() {
 		fi
 	done
 
-	if [[ -d "$PACKAGE/sudoers" ]]; then
-		while IFS= read -r -d "" regla; do
-			visudo -cf "$regla" >/dev/null || return 20
-		done < <(find "$PACKAGE/sudoers" -maxdepth 1 -type f -print0)
-	fi
 }
 
 preparar_directorios() {
