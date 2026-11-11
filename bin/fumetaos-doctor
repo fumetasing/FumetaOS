@@ -26,6 +26,20 @@ check() {
 	fi
 }
 
+configuracion_privada_legible() {
+	local archivo="$1" modo
+
+	[[ -f "$archivo" && -r "$archivo" ]] || return 1
+	modo=$(stat -Lc '%a' -- "$archivo") || return 1
+	case "$modo" in
+	400 | 440 | 600 | 640) return 0 ;;
+	*)
+		printf 'Permisos %s en %s. Se espera 0600 o 0640, o su equivalente de solo lectura.\n' "$modo" "$archivo"
+		return 1
+		;;
+	esac
+}
+
 firewall_active() {
 	sudo ufw status 2>/dev/null |
 		grep -q "Status: active"
@@ -100,7 +114,7 @@ echo
 echo "📁 Sistema"
 echo
 
-check "Configuración" test -f "$CONFIG_FILE"
+check "Configuración privada legible" configuracion_privada_legible "$CONFIG_FILE"
 check "Versión" test -f "$VERSION_FILE"
 check "Scripts ejecutables" test -x "$BIN_DIR/fumetaos"
 
@@ -168,6 +182,10 @@ check "Paquete core sincronizado" diff -qr -- "$CORE_DIR" "$PACKAGE_DIR/core"
 check "Paquete modules sincronizado" diff -qr -- "$MODULES_DIR" "$PACKAGE_DIR/modules"
 check "Paquete services" test -d "$PACKAGE_DIR/services"
 check "Paquete sudoers" test -d "$PACKAGE_DIR/sudoers"
+config_paquete="$PACKAGE_DIR/config/fumetaos.conf"
+if [[ -e "$config_paquete" || -L "$config_paquete" ]]; then
+	check "Configuración privada del paquete" configuracion_privada_legible "$config_paquete"
+fi
 
 echo
 echo "💾 Datos"

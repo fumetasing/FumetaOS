@@ -44,7 +44,7 @@ class DoctorPackageTests(unittest.TestCase):
         for directory in (self.root, self.package):
             (directory / "VERSION").write_text("2.4.41\n")
 
-    def package_report(self):
+    def doctor_report(self):
         result = subprocess.run(
             ["bash", str(self.root / "bin/fumetaos-doctor")],
             env=dict(os.environ, TEST_ROOT=str(self.root)),
@@ -52,8 +52,12 @@ class DoctorPackageTests(unittest.TestCase):
         )
         # Other Doctor checks deliberately fail in the simulated installation.
         self.assertEqual(result.returncode, 20, result.stderr)
-        self.assertIn("📦 Paquete", result.stdout)
-        return result.stdout.split("📦 Paquete", 1)[1].split("💾 Datos", 1)[0]
+        return result.stdout
+
+    def package_report(self):
+        report = self.doctor_report()
+        self.assertIn("📦 Paquete", report)
+        return report.split("📦 Paquete", 1)[1].split("💾 Datos", 1)[0]
 
     def test_matching_version_and_directories_pass(self):
         report = self.package_report()
@@ -80,3 +84,21 @@ class DoctorPackageTests(unittest.TestCase):
         self.assertIn("✅ Versión del paquete coincide con la instalación", report)
         self.assertIn("❌ Paquete modules sincronizado", report)
         self.assertIn("backups.sh", report)
+
+    def test_doctor_flags_configuration_readable_by_other_users(self):
+        config = self.root / "config.conf"
+        config.write_text("# configuración de prueba\n")
+        config.chmod(0o644)
+        self.assertIn("❌ Configuración privada legible", self.doctor_report())
+        config.chmod(0o600)
+        self.assertIn("✅ Configuración privada legible", self.doctor_report())
+
+    def test_doctor_checks_optional_packaged_configuration(self):
+        self.assertNotIn("Configuración privada del paquete", self.package_report())
+        config = self.package / "config/fumetaos.conf"
+        config.parent.mkdir()
+        config.write_text("# configuración de prueba\n")
+        config.chmod(0o644)
+        self.assertIn("❌ Configuración privada del paquete", self.package_report())
+        config.chmod(0o640)
+        self.assertIn("✅ Configuración privada del paquete", self.package_report())
