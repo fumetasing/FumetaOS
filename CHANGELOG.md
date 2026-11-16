@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.49
+
+- Retira los siete temporizadores individuales de FumetaOS sustituidos por la cadena nocturna.
+- El instalador y el actualizador eliminan las unidades antiguas de instalaciones existentes.
+- El README y la guía de recuperación describen la programación de las copias, APT, la verificación y SMART.
+
 ## v2.4.48
 
 - Ubuntu ejecuta los espejos de Time Capsule y de datos directamente en Data WD.
