@@ -2,7 +2,7 @@
 
 ###########################################################
 # FumetaOS
-# Utilidades compartidas para copias espejo al Mac
+# Utilidades compartidas para copias espejo en Data WD
 ###########################################################
 
 mac_mirror_enviar_telegram() {
@@ -18,118 +18,17 @@ mac_mirror_enviar_telegram() {
 	fi
 }
 
-mac_mirror_crear_ssh_command() {
-	SSH_COMMAND=(
-		ssh
-		-i "$SSH_KEY"
-		-o BatchMode=yes
-		-o ConnectTimeout=20
-		-o ServerAliveInterval=30
-		-o ServerAliveCountMax=6
-		-o "UserKnownHostsFile=$SSH_KNOWN_HOSTS"
-		-o StrictHostKeyChecking=yes
-	)
-
-	printf -v RSYNC_SSH_COMMAND '%q ' "${SSH_COMMAND[@]}"
-	RSYNC_SSH_COMMAND="${RSYNC_SSH_COMMAND% }"
-
-	RSYNC_DELETE_OPTIONS=(
-		-a
-		--no-owner
-		--no-group
-		--dry-run
-		--delete-delay
-		--itemize-changes
-		--out-format='%i'
-		--rsync-path=/opt/homebrew/bin/rsync
-		--protect-args
-	)
-
-	RSYNC_COPY_OPTIONS=(
-		-a
-		--no-owner
-		--no-group
-		--delete-delay
-		--partial
-		--human-readable
-		--stats
-		--rsync-path=/opt/homebrew/bin/rsync
-		--protect-args
-		--progress
-	)
-}
-
-mac_mirror_usb_remote_script() {
-	cat <<'REMOTE'
-punto_montaje()
-{
-    df -P "$1" |
-        awk 'NR == 2 { sub(/^.* [0-9][0-9]*%[[:space:]]*/, ""); print }'
-}
-
-# Esta espera empieza en el Mac, después de autenticar SSH.
-# No crear el destino: podría terminar en el disco interno si falta el USB.
-elapsed=0
-while :; do
-    mount_point=""
-    if [ -d "$ROOT" ]; then
-        mount_point="$(punto_montaje "$ROOT" 2>/dev/null)"
-    fi
-    if [ "$mount_point" = "$EXPECTED_MOUNT" ]; then
-        break
-    fi
-    if [ "$elapsed" -ge 180 ]; then
-        echo "Mac accesible; el USB no está montado en $EXPECTED_MOUNT tras 180 segundos" >&2
-        exit 20
-    fi
-    echo "⏳ Mac accesible; esperando el montaje del USB ($elapsed/180 segundos)." >&2
-    sleep 10
-    elapsed=$((elapsed + 10))
-done
-
-available_kb="$(df -Pk "$ROOT" | awk 'NR == 2 { print $4 }')"
-
-case "$available_kb" in
-    ''|*[!0-9]*)
-        echo "No se pudo obtener el espacio libre del USB" >&2
-        exit 22
-        ;;
-esac
-
-if [ "$available_kb" -lt "$MINIMUM_FREE_KB" ]; then
-    echo "El USB tiene menos de 50 GiB libres" >&2
-    exit 22
-fi
-
-if [ ! -r "$ROOT" ] || [ ! -w "$ROOT" ] || [ ! -x "$ROOT" ]; then
-    echo "El destino del USB no tiene permisos suficientes: $ROOT" >&2
-    exit 21
-fi
-
-if [ "${SHOW_SPACE:-0}" -eq 1 ]; then
-    df -h "$ROOT" | awk 'NR == 2 { print $4 "|" $5 }'
-else
-    echo "💾 USB validado: $EXPECTED_MOUNT"
-fi
-REMOTE
-
+mac_mirror_configurar_rsync() {
+    RSYNC_DELETE_OPTIONS=(-a --no-owner --no-group --dry-run --delete-delay --itemize-changes --out-format='%i' --mkpath)
+    RSYNC_COPY_OPTIONS=(-a --chown=server:server --delete-delay --partial --human-readable --stats --progress --mkpath)
 }
 
 mac_mirror_usb_disponible() {
-	local remote_script
-
-	remote_script="$(
-		{
-			printf 'ROOT=%q\n' "$MAC_ROOT"
-			printf 'EXPECTED_MOUNT=%q\n' "$MAC_USB_MOUNT"
-			printf 'MINIMUM_FREE_KB=%q\n' "$MINIMUM_FREE_KB"
-			mac_mirror_usb_remote_script
-		}
-	)"
-
-	mac_mirror_ssh_comprobar \
-		"$MAC_USER@$MAC_HOST" \
-		/usr/bin/caffeinate -i -s /bin/sh -s <<<"$remote_script"
+    local mount=/mnt/data-wd free
+    [ "$(findmnt -n -o UUID -M "$mount")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ] || return 20
+    [ ! -L "$mount/FumetaOS-Server" ] && [ -w "$mount" ] || return 20
+    free=$(df -k --output=avail -- "$mount" | tail -1) || return 20
+    [[ "$free" =~ ^[[:space:]]*[0-9]+$ ]] && (( free >= MINIMUM_FREE_KB ))
 }
 
 mac_mirror_contar_borrados() {
@@ -141,7 +40,6 @@ mac_mirror_contar_borrados() {
 	rsync \
 		"${RSYNC_DELETE_OPTIONS[@]}" \
 		"$@" \
-		-e "$RSYNC_SSH_COMMAND" \
 		"$source_dir" \
 		"$rsync_destination" |
 		awk '$1 == "*deleting" || $1 == "deleting" { count++ } END { print count + 0 }'
@@ -157,93 +55,6 @@ mac_mirror_copiar() {
 		"${RSYNC_COPY_OPTIONS[@]}" \
 		"$@" \
 		"${DRY_RUN[@]}" \
-		-e "$RSYNC_SSH_COMMAND" \
 		"$source_dir" \
 		"$rsync_destination"
-}
-
-# La sesión solo se activa explícitamente en la copia Time Capsule -> Mac.
-mac_mirror_cerrar_sesion() {
-	if [ "${MAC_SESSION_FD_OPEN:-0}" -eq 1 ]; then
-		exec 8>&-
-		MAC_SESSION_FD_OPEN=0
-	fi
-	if [ -n "${MAC_SESSION_PID:-}" ]; then
-		if kill -0 "$MAC_SESSION_PID" 2>/dev/null; then
-			kill "$MAC_SESSION_PID" 2>/dev/null || true
-		fi
-		wait "$MAC_SESSION_PID" 2>/dev/null || true
-		MAC_SESSION_PID=""
-	fi
-	# Solo el directorio privado que creó esta ejecución; nunca datos del Mac.
-	if [ -n "${MAC_SESSION_DIR:-}" ] && [ -d "$MAC_SESSION_DIR" ]; then
-		rm -f -- "$MAC_SESSION_DIR/entrada" "$MAC_SESSION_DIR/listo" \
-			"$MAC_SESSION_DIR/error" "$MAC_SESSION_DIR/control"
-		rmdir -- "$MAC_SESSION_DIR" 2>/dev/null || true
-		MAC_SESSION_DIR=""
-	fi
-}
-
-mac_mirror_abrir_sesion() {
-	local attempt=1 tick remote_command
-	local base_ssh=("${SSH_COMMAND[@]}")
-	remote_command="/usr/bin/caffeinate -i -s /bin/sh -c 'printf \"FUMETAOS_MAC_DESPIERTO\\n\"; exec /bin/cat >/dev/null'"
-	while [ "$attempt" -le 30 ]; do
-		MAC_SESSION_DIR="$(mktemp -d /run/fumetaos-mac-session.XXXXXXXX)" || return 20
-		chmod 700 "$MAC_SESSION_DIR"
-		mkfifo -m 600 "$MAC_SESSION_DIR/entrada"
-		exec 8<>"$MAC_SESSION_DIR/entrada"
-		MAC_SESSION_FD_OPEN=1
-		SSH_COMMAND=("${base_ssh[@]}" -o "ControlPath=$MAC_SESSION_DIR/control")
-		(
-			exec 8>&-
-			exec "${SSH_COMMAND[@]}" -T -o ControlMaster=yes -o ControlPersist=no \
-				"$MAC_USER@$MAC_HOST" "$remote_command" <"$MAC_SESSION_DIR/entrada"
-		) >"$MAC_SESSION_DIR/listo" 2>"$MAC_SESSION_DIR/error" &
-		MAC_SESSION_PID=$!
-		tick=0
-		while [ "$tick" -lt 45 ]; do
-			if grep -qx 'FUMETAOS_MAC_DESPIERTO' "$MAC_SESSION_DIR/listo" &&
-				[ -S "$MAC_SESSION_DIR/control" ] && kill -0 "$MAC_SESSION_PID" 2>/dev/null; then
-				printf -v RSYNC_SSH_COMMAND '%q ' "${SSH_COMMAND[@]}"
-				RSYNC_SSH_COMMAND="${RSYNC_SSH_COMMAND% }"
-				echo "✅ Sesión SSH persistente y protección temporal contra reposo iniciadas."
-				return 0
-			fi
-			kill -0 "$MAC_SESSION_PID" 2>/dev/null || break
-			sleep 1
-			tick=$((tick + 1))
-		done
-		mac_mirror_cerrar_sesion
-		SSH_COMMAND=("${base_ssh[@]}")
-		if [ "$attempt" -lt 30 ]; then
-			echo "⚠️ El Mac no confirmó la sesión; nuevo intento en 15 segundos."
-			sleep 15
-		fi
-		attempt=$((attempt + 1))
-	done
-	echo "❌ No se pudo establecer la sesión protegida con el Mac; no se inicia la copia."
-	return 255
-}
-
-mac_mirror_ssh_comprobar() {
-	local attempt=1 status=0 maximum="${MAC_SSH_CHECK_RETRIES:-1}"
-	while [ "$attempt" -le "$maximum" ]; do
-		if [ -n "${MAC_SESSION_PID:-}" ] && ! kill -0 "$MAC_SESSION_PID" 2>/dev/null; then
-			echo "❌ Se perdió la sesión que mantiene despierto el Mac." >&2
-			return 255
-		fi
-		if "${SSH_COMMAND[@]}" "$@"; then
-			return 0
-		else
-			status=$?
-		fi
-		# Nunca tratar un error remoto de disco/carpeta como un error de red.
-		[ "$status" -eq 255 ] || return "$status"
-		[ "$attempt" -lt "$maximum" ] || return "$status"
-		echo "⚠️ Falló la conexión SSH de comprobación; reintento en 15 segundos." >&2
-		sleep 15
-		attempt=$((attempt + 1))
-	done
-	return "$status"
 }

@@ -1,5 +1,5 @@
 [Unit]
-Description=Ejecutar copia espejo diaria de datos FumetaOS al Mac
+Description=Ejecutar copia espejo diaria de datos FumetaOS a Data WD
 
 [Timer]
 OnCalendar=*-*-* 01:00:00

@@ -11,19 +11,14 @@ FOLDERS=(
 	Series
 )
 
-MAC_USER="fumetasing"
-MAC_HOST="192.168.1.5"
-MAC_ROOT="/Users/fumetasing/FumetaOS-Server"
+MAC_ROOT="/mnt/data-wd/FumetaOS-Server"
 MAC_DESTINATION="$MAC_ROOT/TimeCapsule/Multimedia"
-MAC_USB_MOUNT="/Volumes/Data USB"
 
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
 DELETE_LIMIT=20
 MAX_RETRIES=3
 RETRY_DELAY=60
 
-SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
-SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
 TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
 
@@ -44,7 +39,7 @@ notificar_error() {
 
 	mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
 
-La copia de Time Capsule al Mac ha fallado.
+La copia de Time Capsule a Data WD ha fallado.
 
 Paso: $CURRENT_STEP
 Código: $status
@@ -58,53 +53,19 @@ manejar_error() {
 	trap - ERR
 
 	echo
-	echo "🔴 La copia de Time Capsule al Mac ha fallado en: $CURRENT_STEP"
+	echo "🔴 La copia de Time Capsule a Data WD ha fallado en: $CURRENT_STEP"
 
 	notificar_error "$status"
 
 	exit "$status"
 }
 
-preparar_destinos_mac() {
-	local folder
-	local remote_script
-
-	remote_script="$(
-		{
-			printf 'DESTINATION=%q\n' "$MAC_DESTINATION"
-
-			for folder in "${FOLDERS[@]}"; do
-				printf 'mkdir -p %q\n' "$MAC_DESTINATION/$folder"
-			done
-
-			cat <<'REMOTE'
-mkdir -p "$DESTINATION"
-REMOTE
-		}
-	)"
-
-	mac_mirror_ssh_comprobar \
-		"$MAC_USER@$MAC_HOST" \
-		/bin/sh -s <<<"$remote_script" ||
-		mostrar_error "No se pudieron preparar los destinos en el Mac"
-}
-
-validar_destinos_mac() {
-	local folder remote_script status
-	remote_script="$(
-		for folder in "${FOLDERS[@]}"; do
-			printf 'test -d %q || exit 20\n' "$MAC_DESTINATION/$folder"
-		done
-	)"
-	if mac_mirror_ssh_comprobar "$MAC_USER@$MAC_HOST" /bin/bash -s <<<"$remote_script"; then
-		return 0
-	else
-		status=$?
-	fi
-	if [ "$status" -eq 255 ]; then
-		mostrar_error "No se pudo comprobar el destino por SSH; no se afirma que falten carpetas"
-	fi
-	mostrar_error "Falló la comprobación remota de las carpetas del destino (código $status)"
+preparar_destinos_wd() {
+    local dir
+    for dir in "$MAC_ROOT/TimeCapsule" "$MAC_DESTINATION" "${FOLDERS[@]/#/$MAC_DESTINATION/}"; do
+        [ ! -L "$dir" ] || mostrar_error "Enlace en destino: $dir"
+        if [ "${#DRY_RUN[@]}" -eq 0 ]; then mkdir -p -- "$dir"; fi
+    done
 }
 
 comprobar_borrados_previstos() {
@@ -137,9 +98,9 @@ ejecutar_rsync_con_reintentos() {
 		CURRENT_STEP="Validación del USB antes del intento $attempt de $folder"
 
 		mac_mirror_usb_disponible ||
-			mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
+			mostrar_error "El WD de Ubuntu no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
 
-		validar_destinos_mac
+		preparar_destinos_wd
 
 		CURRENT_STEP="Copia de $folder"
 
@@ -191,26 +152,18 @@ findmnt -T "$SOURCE_BASE" -no FSTYPE |
 	grep -qx 'cifs' ||
 	mostrar_error "Time Capsule no está montada correctamente"
 
-[ -r "$SSH_KEY" ] ||
-	mostrar_error "No existe la clave SSH: $SSH_KEY"
-
-[ -r "$SSH_KNOWN_HOSTS" ] ||
-	mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
-
 exec 9>"$LOCK_FILE"
 
 flock -n 9 ||
-	mostrar_error "Ya hay una copia al Mac en curso"
+	mostrar_error "Ya hay una copia a Data WD en curso"
 
-mac_mirror_crear_ssh_command
-MAC_SSH_CHECK_RETRIES=3
-trap mac_mirror_cerrar_sesion EXIT
+mac_mirror_configurar_rsync
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
 trap manejar_error ERR
 
-echo "💾 Copia espejo de Time Capsule al Mac"
+echo "💾 Copia espejo de Time Capsule a Data WD"
 echo "📍 Origen: $SOURCE_BASE"
 echo "📍 Destino: $MAC_DESTINATION"
 echo "💾 Time Capsule validada"
@@ -218,25 +171,14 @@ echo "🛡️ Límite automático de borrados: $DELETE_LIMIT por carpeta"
 echo "🔄 Reintentos por carpeta: $MAX_RETRIES"
 echo
 
-CURRENT_STEP="Sesión persistente y protección temporal contra reposo"
-mac_mirror_abrir_sesion
-
-CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
-
-mac_mirror_usb_disponible ||
-	mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
-
-if [ "${#DRY_RUN[@]}" -gt 0 ]; then
-	validar_destinos_mac
-else
-	CURRENT_STEP="Preparación de destinos en el Mac"
-	preparar_destinos_mac
-fi
+CURRENT_STEP="Preparación del destino Data WD"
+mac_mirror_usb_disponible || mostrar_error "Data WD no está disponible"
+preparar_destinos_wd
 
 for folder in "${FOLDERS[@]}"; do
 	source_dir="$SOURCE_BASE/$folder/"
 	destination_dir="$MAC_DESTINATION/$folder"
-	rsync_destination="$MAC_USER@$MAC_HOST:$destination_dir/"
+	rsync_destination="$destination_dir/"
 
 	[ -d "$source_dir" ] ||
 		mostrar_error "No existe la carpeta de origen: $source_dir"

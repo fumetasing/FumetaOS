@@ -79,21 +79,21 @@ exit 99
             capture_output=True, text=True, env=env, timeout=5,
         )
         self.assertFalse(self.unexpected.exists(), result.stdout + result.stderr)
-        self.assertNotIn("USB del Mac", result.stdout)
+        self.assertNotIn("Data WD en Ubuntu", result.stdout)
         return result
 
     def test_recent_backups_and_verification_are_current(self):
         result = self.history()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         self.assertIn("✅ Copia local", result.stdout)
-        self.assertIn("✅ Espejo general al Mac", result.stdout)
+        self.assertIn("✅ Espejo general a Data WD", result.stdout)
         self.assertIn("✅ Verificación cifrada", result.stdout)
 
     def test_daily_backups_and_weekly_verification_use_different_limits(self):
         result = self.history(daily_age=31 * HOUR, verify_age=31 * HOUR)
         self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
         self.assertIn("🔴 Copia local", result.stdout)
-        self.assertIn("🔴 Espejo general al Mac", result.stdout)
+        self.assertIn("🔴 Espejo general a Data WD", result.stdout)
         self.assertIn("límite 30 h", result.stdout)
         self.assertIn("✅ Verificación cifrada", result.stdout)
 
@@ -107,5 +107,5 @@ exit 99
     def test_unavailable_journal_is_reported_as_unconfirmed(self):
         result = self.history(failed_journal_unit="fumetaos-mac-backup.service")
         self.assertEqual(result.returncode, 10, result.stdout + result.stderr)
-        self.assertIn("🟡 Espejo general al Mac", result.stdout)
+        self.assertIn("🟡 Espejo general a Data WD", result.stdout)
         self.assertIn("estado no confirmado", result.stdout)

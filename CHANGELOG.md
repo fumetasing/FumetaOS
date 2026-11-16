@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.48
+
+- Ubuntu ejecuta los espejos de Time Capsule y de datos directamente en Data WD.
+- Los espejos comprueban el UUID y el espacio libre del volumen. El espejo general excluye el archivo temporal de migración.
+- La cadena nocturna y los informes identifican Data WD como destino.
+
 ## v2.4.47
 
 - El constructor y el instalador guardan la configuración privada con permisos 0640 y propietario root:server.

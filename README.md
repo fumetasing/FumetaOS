@@ -39,8 +39,8 @@ desacoplar primero esos enlaces.** La configuración y el paquete son independie
 
 Zona horaria: Europe/Madrid.
 
-- Cadena nocturna a las 00:30: copia local → Time Capsule al Mac → recuperación
-  cifrada y VM → espejo general al Mac → actualización de Ubuntu → limpieza Docker.
+- Cadena nocturna a las 00:30: copia local → Time Capsule a Data WD → recuperación
+  cifrada y VM → espejo general a Data WD → actualización de Ubuntu → limpieza Docker.
 - Verificación Restic los lunes o recuperación de una cita semanal perdida.
 - SMART de HDD y SSD al final de la cadena: corto de martes a domingo y largo los lunes,
   después de la verificación cifrada; sin cita mensual ni hora independiente.

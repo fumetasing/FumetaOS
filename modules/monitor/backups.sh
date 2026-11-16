@@ -185,170 +185,17 @@ ha_fallado() {
 	[ "${BAD[$idx]:-0}" -gt "${OK[$idx]:-0}" ]
 }
 
-despertar_mac() {
-	local mac_ip="192.168.1.5"
-	local mac_fallback="f6:58:56:8e:f7:da"
-	local mac_detectada=""
-	local mac_address=""
-
-	mac_detectada=$(
-		ip neigh show "$mac_ip" |
-			awk '
-				/lladdr/ {
-					print $5
-					exit
-				}
-			'
-	)
-
-	if [[ "$mac_detectada" =~ ^([[:xdigit:]]{2}:){5}[[:xdigit:]]{2}$ ]]; then
-		mac_address="$mac_detectada"
-	else
-		mac_address="$mac_fallback"
-	fi
-
-	command -v python3 >/dev/null 2>&1 ||
-		return 1
-
-	python3 - "$mac_address" <<'PYTHON'
-import socket
-import sys
-import time
-
-mac = sys.argv[1].replace(":", "").replace("-", "")
-
-if len(mac) != 12:
-    raise SystemExit(20)
-
-packet = bytes.fromhex("FF" * 6 + mac * 16)
-
-with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
-    sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
-
-    for _ in range(12):
-        sock.sendto(packet, ("255.255.255.255", 9))
-        sock.sendto(packet, ("192.168.1.255", 9))
-        time.sleep(0.5)
-PYTHON
-}
-
 mostrar_usb() {
-	local output=""
-	local free=""
-	local used=""
-	local attempt=1
-	local retries=5
-	local total_attempts=$((retries + 1))
-	local retry_delay=10
-	local wake_delay=15
-	local wake_status=0
-	local status=0
-	local attempts_done=0
-	local remote_script
-	local last_error="No disponible o no se pudo consultar"
-
-	remote_script="$(
-		printf '%s\n' \
-			'ROOT="/Users/fumetasing/FumetaOS-Server"' \
-			'EXPECTED_MOUNT="/Volumes/Data USB"' \
-			'MINIMUM_FREE_KB=0' \
-			'SHOW_SPACE=1'
-		mac_mirror_usb_remote_script
-	)"
-
-	while [ "$attempt" -le "$total_attempts" ]; do
-		attempts_done="$attempt"
-		output=""
-		free=""
-		used=""
-
-		if output=$(
-			timeout 210 ssh \
-				-i /home/server/.ssh/id_ed25519_fumetaos_mac \
-				-o BatchMode=yes \
-				-o ConnectTimeout=10 \
-				-o ServerAliveInterval=5 \
-				-o ServerAliveCountMax=2 \
-				-o UserKnownHostsFile=/home/server/.ssh/known_hosts \
-				-o StrictHostKeyChecking=yes \
-				fumetasing@192.168.1.5 \
-				/usr/bin/caffeinate -i -s /bin/sh -s \
-				2>/dev/null <<<"$remote_script"
-		); then
-			IFS='|' read -r free used <<<"$output"
-
-			if [[ -n "$free" && "$used" =~ ^[0-9]+%$ ]]; then
-				echo "🟢 USB del Mac"
-				echo "   Libre: $free"
-				echo "   Uso: $used"
-
-				if [ "$wake_status" -eq 1 ]; then
-					echo "   Despertar por red: solicitado correctamente"
-					echo "   Intentos necesarios: $attempt"
-				fi
-
-				return
-			fi
-
-			last_error="No se pudo interpretar el espacio disponible"
-		else
-			status=$?
-			case "$status" in
-			20)
-				last_error="Mac accesible; el USB no se montó tras esperar 180 segundos"
-				break
-				;;
-			21)
-				last_error="USB montado, pero sin permisos suficientes en el destino"
-				break
-				;;
-			22)
-				last_error="USB montado, pero no se pudo validar su espacio disponible"
-				break
-				;;
-			*)
-				last_error="No se pudo completar la conexión o consulta SSH al Mac"
-				;;
-			esac
-		fi
-
-		if [ "$attempt" -lt "$total_attempts" ]; then
-			if [ "$wake_status" -eq 0 ]; then
-				if despertar_mac; then
-					wake_status=1
-					last_error="Despertar enviado; esperando SSH y el USB"
-					sleep "$wake_delay"
-				else
-					wake_status=2
-					last_error="No se pudo enviar el despertar por red"
-					sleep "$retry_delay"
-				fi
-			else
-				sleep "$retry_delay"
-			fi
-		fi
-
-		attempt=$((attempt + 1))
-	done
-
-	echo "🔴 USB del Mac"
-	echo "   $last_error"
-	echo "   Intentos realizados: $attempts_done"
-
-	case "$wake_status" in
-	1)
-		echo "   Despertar por red: enviado"
-		;;
-	2)
-		echo "   Despertar por red: no se pudo enviar"
-		;;
-	*)
-		echo "   Despertar por red: no fue necesario"
-		;;
-	esac
-
-	elevar_error 20
+    local wd=/mnt/data-wd
+    if [ "$(findmnt -n -o UUID -M "$wd")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ]; then
+        echo "🟢 Data WD en Ubuntu"
+        df -h --output=avail,pcent -- "$wd" | awk 'NR==2 {print "   Libre: " $1; print "   Uso: " $2}'
+    else
+        echo "🔴 Data WD no está montado en Ubuntu"
+        elevar_error 20
+    fi
 }
+
 mostrar_copia() {
 	local idx="$1"
 	local unit="${UNITS[$1]}"
@@ -431,7 +278,7 @@ mostrar_copia() {
 		next="Tras la copia local (cadena inicia: $next)"
 		;;
 	"$RECOVERY")
-		next="Tras Time Capsule → Mac (cadena inicia: $next)"
+		next="Tras Time Capsule → Data WD (cadena inicia: $next)"
 		;;
 	"$GENERAL")
 		next="Tras la recuperación (cadena inicia: $next)"
@@ -482,7 +329,7 @@ echo
 mostrar_copia \
 	1 \
 	"$NIGHTLY_TIMER" \
-	"Time Capsule → Mac" \
+	"Time Capsule → Data WD" \
 	"$DAILY_LIMIT"
 
 echo
@@ -496,7 +343,7 @@ echo
 mostrar_copia \
 	3 \
 	"$NIGHTLY_TIMER" \
-	"Espejo general al Mac" \
+	"Espejo general a Data WD" \
 	"$DAILY_LIMIT"
 
 echo

@@ -3,11 +3,8 @@
 set -euo pipefail
 
 SOURCE_DIR="/mnt/datos/"
-MAC_USER="fumetasing"
-MAC_HOST="192.168.1.5"
-MAC_ROOT="/Users/fumetasing/FumetaOS-Server"
+MAC_ROOT="/mnt/data-wd/FumetaOS-Server"
 MAC_DESTINATION="$MAC_ROOT"
-MAC_USB_MOUNT="/Volumes/Data USB"
 
 MINIMUM_FREE_KB=$((50 * 1024 * 1024))
 DELETE_LIMIT=50
@@ -18,8 +15,6 @@ MAC_RECOVERY_DESTINATION="$MAC_DESTINATION/$MAC_RECOVERY_RELATIVE"
 MAX_RETRIES=3
 RETRY_DELAY=60
 
-SSH_KEY="/home/server/.ssh/id_ed25519_fumetaos_mac"
-SSH_KNOWN_HOSTS="/home/server/.ssh/known_hosts"
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
 TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
 
@@ -29,6 +24,7 @@ CURRENT_STEP="Preparación"
 
 RSYNC_FILTER_OPTIONS=(
 	--exclude='/lost+found/'
+	--exclude='/backups/migracion-data-usb-20261114/'
 	--exclude='/TimeCapsule/'
 	--filter='P /TimeCapsule/***'
 	--exclude='/backups/fumetaos/recovery-repo/'
@@ -49,7 +45,7 @@ notificar_error() {
 
 	mac_mirror_enviar_telegram "🔴 FumetaOS ERROR
 
-La copia de datos al Mac ha fallado.
+La copia de datos a Data WD ha fallado.
 
 Paso: $CURRENT_STEP
 Código: $status
@@ -68,12 +64,12 @@ manejar_error() {
 			exit 25
 		fi
 		echo "⚠️ Espejo parcial: se alcanzó el cupo de borrados. Pendientes para el próximo día con cupo disponible."
-		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo al Mac pendiente. Cupo diario de 50 borrados fuera de PS4 & PS5 y del repositorio cifrado de recuperación alcanzado; continúa con el cupo del próximo día. No se da por completa esta ejecución." || true
+		mac_mirror_enviar_telegram "🟡 FumetaOS: espejo a Data WD pendiente. Cupo diario de 50 borrados fuera de PS4 & PS5 y del repositorio cifrado de recuperación alcanzado; continúa con el cupo del próximo día. No se da por completa esta ejecución." || true
 		exit 25
 	fi
 
 	echo
-	echo "🔴 La copia de datos al Mac ha fallado en: $CURRENT_STEP"
+	echo "🔴 La copia de datos a Data WD ha fallado en: $CURRENT_STEP"
 
 	notificar_error "$status"
 
@@ -154,7 +150,7 @@ ejecutar_rsync_con_reintentos() {
 		mostrar_error "La carpeta original PS4 & PS5 no es un directorio real; no se copia ni borra nada"
 	mac_mirror_preparar_recovery || mostrar_error "Repositorio cifrado no válido; no se copia ni borra nada"
 	CURRENT_STEP="Contar borrados sujetos al cupo diario"
-	deletes="$(mac_mirror_contar_borrados "$SOURCE_DIR" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" "${otros[@]}")" || return "$?"
+	deletes="$(mac_mirror_contar_borrados "$SOURCE_DIR" "$MAC_DESTINATION/" "${otros[@]}")" || return "$?"
 	case "$deletes" in ''|*[!0-9]*) mostrar_error "No se pudo contar los borrados" ;; esac
 	mode=reserve
 	[ "${#DRY_RUN[@]}" -eq 0 ] || mode=inspect
@@ -164,7 +160,7 @@ ejecutar_rsync_con_reintentos() {
 	# Una sola transferencia por grupo, nunca reintentar borrados automáticamente.
 	CURRENT_STEP="Copia de PS4 & PS5 sin límite de borrados"
 	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
-	if mac_mirror_copiar "${SOURCE_DIR%/}/PS4 & PS5/" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/PS4 & PS5/"; then
+	if mac_mirror_copiar "${SOURCE_DIR%/}/PS4 & PS5/" "$MAC_DESTINATION/PS4 & PS5/" --mkpath; then
 		:
 	else
 		return "$?"
@@ -172,7 +168,7 @@ ejecutar_rsync_con_reintentos() {
 	mac_mirror_copiar_recovery || return "$?"
 	CURRENT_STEP="Copia del resto del espejo, cupo diario de borrados"
 	mac_mirror_usb_disponible || mostrar_error "USB no disponible o no validado"
-	if mac_mirror_copiar "$SOURCE_DIR" "$MAC_USER@$MAC_HOST:$MAC_DESTINATION/" "${otros[@]}" "--max-delete=$quota"; then
+	if mac_mirror_copiar "$SOURCE_DIR" "$MAC_DESTINATION/" "${otros[@]}" "--max-delete=$quota"; then
 		return 0
 	else
 		status="$?"
@@ -207,50 +203,32 @@ esac
 mountpoint -q /mnt/datos ||
 	mostrar_error "/mnt/datos no está montado"
 
-[ -r "$SSH_KEY" ] ||
-	mostrar_error "No existe la clave SSH: $SSH_KEY"
-
-[ -r "$SSH_KNOWN_HOSTS" ] ||
-	mostrar_error "No existe el archivo de hosts SSH conocidos: $SSH_KNOWN_HOSTS"
-
 exec 9>"$LOCK_FILE"
 
 flock -n 9 ||
-	mostrar_error "Ya hay una copia al Mac en curso"
+	mostrar_error "Ya hay una copia a Data WD en curso"
 
-# Evitar cambios de Restic mientras se copia el repositorio al Mac.
+# Evitar cambios de Restic mientras se copia el repositorio a Data WD.
 exec 7>/run/lock/fumetaos-recovery-backup.lock
 flock -n 7 ||
     mostrar_error "La copia o verificación cifrada está en curso; no se inicia el espejo"
 
-mac_mirror_crear_ssh_command
+mac_mirror_configurar_rsync
 
 trap manejar_error ERR
 
-echo "💾 Copia espejo de /mnt/datos al Mac"
+echo "💾 Copia espejo de /mnt/datos a Data WD"
 echo "📍 Destino: $MAC_DESTINATION"
 echo "🛡️ Límite diario fuera de PS4 & PS5 y del repositorio cifrado de recuperación: $DELETE_LIMIT"
 echo "ℹ️ Tres grupos: PS4 & PS5 y repositorio cifrado exentos; resto limitado; sin reintentos automáticos."
 echo
 
-# FUMETAOS_GENERAL_MAC_SESSION_V1
-MAC_SSH_CHECK_RETRIES=3
-trap mac_mirror_cerrar_sesion EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-CURRENT_STEP="Sesión SSH protegida con el Mac"
-mac_mirror_abrir_sesion ||
-	mostrar_error "No se pudo establecer la sesión protegida con el Mac; no se inicia la copia"
-
-CURRENT_STEP="Comprobación inicial del Mac y del disco USB"
-
-mac_mirror_usb_disponible ||
-	mostrar_error "El USB del Mac no está listo, no es el disco esperado o tiene menos de 50 GiB libres"
-
-mac_mirror_ssh_comprobar \
-	"$MAC_USER@$MAC_HOST" \
-	"test -d '$MAC_DESTINATION'" ||
-	mostrar_error "El Mac o el disco USB no están disponibles"
+CURRENT_STEP="Preparación del destino Data WD"
+mac_mirror_usb_disponible || mostrar_error "Data WD no está disponible"
+if [ "${#DRY_RUN[@]}" -eq 0 ]; then mkdir -p -- "$MAC_ROOT"; fi
+for dir in "$MAC_ROOT" "$MAC_ROOT/PS4 & PS5"; do
+    [ ! -L "$dir" ] || mostrar_error "Enlace en destino: $dir"
+done
 
 if [ "${#DRY_RUN[@]}" -eq 0 ] &&
 	[ "$ALLOW_LARGE_DELETE" -eq 0 ]; then

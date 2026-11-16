@@ -1,5 +1,5 @@
 [Unit]
-Description=Copia espejo diaria de datos FumetaOS al Mac
+Description=Copia espejo diaria de datos FumetaOS a Data WD
 After=network-online.target
 Wants=network-online.target
 RequiresMountsFor=/mnt/datos

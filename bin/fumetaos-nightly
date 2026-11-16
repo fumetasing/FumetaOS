@@ -11,9 +11,9 @@ declare -a FAILED=()
 print_plan() {
     printf '%s\n' \
         '00:30 → copia local' \
-        'después → Time Capsule al Mac' \
+        'después → Time Capsule a Data WD' \
         'después → copia de recuperación' \
-        'después → espejo general al Mac' \
+        'después → espejo general a Data WD' \
         'después → actualización de Ubuntu' \
         'después → limpieza segura de Docker' \
         'los lunes, después → verificación cifrada' \
@@ -101,9 +101,9 @@ echo '🌙 Cadena nocturna FumetaOS'
 echo "Inicio: $(date '+%d/%m/%Y %H:%M:%S %Z')"
 
 run_step 'Copia local' fumetaos-backup.service
-run_step 'Time Capsule → Mac' fumetaos-timecapsule-mac-backup.service
+run_step 'Time Capsule → Data WD' fumetaos-timecapsule-mac-backup.service
 run_step 'Copia de recuperación' fumetaos-recovery-backup.service
-run_step 'Espejo general → Mac' fumetaos-mac-backup.service
+run_step 'Espejo general → Data WD' fumetaos-mac-backup.service
 run_step 'Actualización de Ubuntu' fumetaos-system-upgrade.service
 run_step 'Limpieza segura de Docker' fumetaos-docker-clean.service
 

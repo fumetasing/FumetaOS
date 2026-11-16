@@ -1,6 +1,6 @@
 # Recuperación y migración de FumetaOS
 
-Estado de referencia: FumetaOS 2.4.39, 11/11/2026. Esta guía es un procedimiento
+Estado de referencia: FumetaOS 2.4.48, 16/11/2026. Esta guía es un procedimiento
 de planificación; no autoriza ni ejecuta una restauración en producción.
 
 Consultar también [arquitectura de FumetaOS](ARQUITECTURA.md).
@@ -11,24 +11,24 @@ Consultar también [arquitectura de FumetaOS](ARQUITECTURA.md).
    módulos, VERSION y unidades principales. Destinos: `/mnt/datos/backups/fumetaos`
    y `/var/backups/fumetaos`. Retención 7 diarias, 4 semanales y 3 mensuales.
    No es una copia completa del servidor y no recoge los drop-ins de systemd.
-2. **Time Capsule → Mac:** espejo de las carpetas multimedia configuradas bajo
-   `/DATA/TimeCapsule/Multimedia` al destino multimedia del USB del Mac.
+2. **Time Capsule → Data WD:** espejo de las carpetas multimedia configuradas bajo
+   `/DATA/TimeCapsule/Multimedia` a `/mnt/data-wd/FumetaOS-Server/TimeCapsule/Multimedia`.
 3. **Recuperación cifrada Restic:** configuración del sistema, usuario, aplicaciones
    y VM; retención 14 diarias, 8 semanales y 12 mensuales.
-4. **Espejo general → Mac:** `/mnt/datos` a
-   el destino configurado en el USB. El repositorio Restic se sincroniza por
+4. **Espejo general → Data WD:** `/mnt/datos` a
+   `/mnt/data-wd/FumetaOS-Server`. El repositorio Restic se sincroniza por
    separado, con el bloqueo de recuperación y fuera del cupo de borrados.
    Consulta la [guía del espejo Restic](ESPEJO-RESTIC-SIN-CUPO.md).
 
 Los espejos reflejan también borrados, dentro de sus protecciones. No equivalen
-a un archivo histórico inmutable. El destino del Mac debe resolver realmente al
-USB `/Volumes/Data USB`; no basta con que exista una carpeta con ese nombre.
+a un archivo histórico inmutable. Ubuntu comprueba que `/mnt/data-wd` sea el volumen previsto por UUID antes de
+escribir. El destino SMB de Time Machine usa una partición independiente.
 
 ## Programación correcta
 
 La recuperación no tiene actualmente un horario independiente a las 04:00.
 Forma parte de `fumetaos-nightly.service`, iniciada diariamente a las 00:30
-Europe/Madrid. Se ejecuta tras Time Capsule → Mac y antes del espejo general.
+Europe/Madrid. Se ejecuta tras Time Capsule → Data WD y antes del espejo general.
 Los timers individuales están desactivados. La cadena verifica Restic los lunes
 o si han pasado al menos siete días desde la última verificación correcta. Al
 final ejecuta SMART largo los lunes y SMART corto de martes a domingo.
@@ -118,7 +118,6 @@ Tailscale a dos servidores activos.
 
 ## Límites que hay que conservar
 
-- Apertura SSH al Mac: 30 intentos, 15 segundos entre ellos; no garantiza despertar.
 - Espejo general: hasta 50 borrados por día natural del servidor fuera de
   `PS4 & PS5` y del repositorio Restic. Ambos se sincronizan fuera del cupo.
 - Contador: `/var/lib/fumetaos-mac-delete-budget/contador.json`, root, directorio
@@ -126,8 +125,7 @@ Tailscale a dos servidores activos.
   no concede automáticamente otro cupo. No borrarlo para intentar reparar una copia.
 - Time Capsule: 20 borrados por carpeta, sin convertirlo en un cupo diario global.
 - Código rsync 25: copia parcial por límite; no anunciar copia completa.
-- USB del Mac: al menos 50 GiB libres y montaje real validado. Tras conectar
-  por SSH, los espejos esperan hasta 180 segundos a que aparezca el montaje.
+- Data WD debe estar montado en Ubuntu con al menos 50 GiB libres.
 
 ## Material privado que no debe faltar
 

@@ -17,9 +17,12 @@ FumetaOS automatiza la operación de un servidor Ubuntu con CasaOS. El
 
 ## Copias y recuperación
 
-La cadena nocturna coordina la copia local, el espejo de Time Capsule al Mac,
-la recuperación cifrada y el espejo general al Mac. Después ejecuta el
+La cadena nocturna coordina la copia local, el espejo de Time Capsule a Data WD,
+la recuperación cifrada y el espejo general a Data WD. Después ejecuta el
 mantenimiento y las verificaciones programadas.
+
+Ubuntu ejecuta ambos espejos directamente sobre `/mnt/data-wd`. El Mac puede
+acceder a Data WD por SMB.
 
 El espejo sincroniza por separado el repositorio Restic y comparte el bloqueo
 de recuperación. Consulta la [guía de recuperación](RECUPERACION.md) y la

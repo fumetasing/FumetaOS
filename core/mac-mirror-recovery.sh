@@ -43,7 +43,7 @@ if [ -d "$RECOVERY_DESTINATION" ]; then
         echo "El destino existente no tiene configuración Restic; no se borra" >&2
         exit 20
     fi
-    actual=$(shasum -a 256 "$config" | awk '{print $1}')
+    actual=$(sha256sum "$config" | awk '{print $1}')
     if [ "$actual" != "$EXPECTED_CONFIG_HASH" ]; then
         echo "El destino pertenece a otro repositorio Restic; no se borra" >&2
         exit 20
@@ -64,12 +64,12 @@ mac_mirror_preparar_recovery() {
         mac_mirror_recovery_remote_script
     )
     mac_mirror_usb_disponible || return 20
-    mac_mirror_ssh_comprobar "$MAC_USER@$MAC_HOST" /bin/sh -s <<<"$remote_script" || return 20
+    /bin/bash -s <<<"$remote_script" || return 20
 }
 
 mac_mirror_copiar_recovery() {
     CURRENT_STEP="Copia del repositorio cifrado de recuperación sin límite de borrados"
     mac_mirror_usb_disponible || return 20
     mac_mirror_copiar "$MAC_RECOVERY_SOURCE/" \
-        "$MAC_USER@$MAC_HOST:$MAC_RECOVERY_DESTINATION/" --mkpath
+        "$MAC_RECOVERY_DESTINATION/" --mkpath
 }
