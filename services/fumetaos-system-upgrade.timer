@@ -1,9 +1,0 @@
-[Unit]
-Description=Ejecutar actualización completa de Ubuntu cada día a las 05:30
-
-[Timer]
-OnCalendar=*-*-* 05:30:00
-Persistent=false
-
-[Install]
-WantedBy=timers.target

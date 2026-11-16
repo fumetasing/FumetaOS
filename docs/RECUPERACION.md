@@ -29,7 +29,7 @@ escribir. El destino SMB de Time Machine usa una partición independiente.
 La recuperación no tiene actualmente un horario independiente a las 04:00.
 Forma parte de `fumetaos-nightly.service`, iniciada diariamente a las 00:30
 Europe/Madrid. Se ejecuta tras Time Capsule → Data WD y antes del espejo general.
-Los timers individuales están desactivados. La cadena verifica Restic los lunes
+Los temporizadores individuales de FumetaOS se retiran al actualizar. La cadena verifica Restic los lunes
 o si han pasado al menos siete días desde la última verificación correcta. Al
 final ejecuta SMART largo los lunes y SMART corto de martes a domingo.
 

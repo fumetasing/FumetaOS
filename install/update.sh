@@ -183,7 +183,7 @@ actualizar() {
 	fi
 
 	echo
-	echo "⛓️ Desactivando horarios antiguos de copias y actualización"
+	echo "⛓️ Retirando temporizadores sustituidos por la cadena"
 	for TIMER in \
 		fumetaos-backup.timer \
 		fumetaos-timecapsule-mac-backup.timer \
@@ -191,9 +191,16 @@ actualizar() {
 		fumetaos-recovery-backup.timer \
 		fumetaos-recovery-verify.timer \
 		fumetaos-system-upgrade.timer \
-		fumetaos-smart-test.timer \
-		apt-daily.timer \
-		apt-daily-upgrade.timer; do
+		fumetaos-smart-test.timer; do
+		if systemctl cat "$TIMER" >/dev/null 2>&1; then
+			systemctl disable --now "$TIMER" || exit 20
+		fi
+		rm -f -- "/etc/systemd/system/$TIMER" || exit 20
+	done
+	systemctl daemon-reload || exit 20
+
+	# Ubuntu proporciona estas unidades. Solo se desactivan.
+	for TIMER in apt-daily.timer apt-daily-upgrade.timer; do
 		systemctl disable --now "$TIMER" || true
 	done
 

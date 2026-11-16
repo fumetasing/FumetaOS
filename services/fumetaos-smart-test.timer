@@ -1,9 +1,0 @@
-[Unit]
-Description=Prueba SMART larga mensual de FumetaOS
-
-[Timer]
-OnCalendar=Sat *-*-01..07 08:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target

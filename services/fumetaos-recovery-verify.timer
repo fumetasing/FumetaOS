@@ -1,9 +1,0 @@
-[Unit]
-Description=Verificar semanalmente la copia cifrada de FumetaOS
-
-[Timer]
-OnCalendar=Mon *-*-* 06:00:00
-Persistent=true
-
-[Install]
-WantedBy=timers.target

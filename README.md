@@ -48,9 +48,10 @@ Zona horaria: Europe/Madrid.
 - Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;
   retirada de torrents terminados e inactivos cada 5; limpieza de histórico a las 02:00.
 
-Los antiguos timers separados de copias, APT, verificación y SMART están
-desactivados en favor de la cadena. Sus horarios escritos en los archivos no
-describen la programación activa. Consultar `systemctl list-timers --all`.
+La cadena nocturna concentra las copias, la actualización de Ubuntu, la
+verificación y SMART. El instalador retira los temporizadores individuales
+de FumetaOS al actualizar una instalación anterior. Los temporizadores de
+APT de Ubuntu se desactivan para evitar actualizaciones fuera de la cadena.
 
 ## Comandos principales
 
