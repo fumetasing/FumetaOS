@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.50
+
+- Los espejos nocturnos a Data WD copian los atributos extendidos de archivos y carpetas, incluidos los metadatos de Finder expuestos por el origen. Los archivos de vistas `.DS_Store` siguen incluidos.
+- El espejo de Time Capsule conserva el icono de cada carpeta principal del destino cuando el origen no aporta uno.
+- El informe de estado muestra nombres descriptivos para los temporizadores de FumetaOS.
+
 ## v2.4.49
 
 - Retira los siete temporizadores individuales de FumetaOS sustituidos por la cadena nocturna.
