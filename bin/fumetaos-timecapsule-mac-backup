@@ -87,12 +87,52 @@ comprobar_borrados_previstos() {
 	fi
 }
 
+metadatos_icono_destino() {
+	python3 -B - "$1" "${2:-}" <<'PYICON'
+import errno
+import json
+import os
+import sys
+
+path, saved = sys.argv[1:]
+if os.path.islink(path) or not os.path.isdir(path):
+    raise SystemExit(f"Destino de icono inválido: {path}")
+
+def read_attribute(key):
+    try:
+        return os.getxattr(path, key, follow_symlinks=False)
+    except OSError as exc:
+        if exc.errno != errno.ENODATA:
+            raise
+        return None
+
+icon = "user.DosStream.com.apple.icon.folder#S:$DATA"
+info = "user.DosStream.AFP_AfpInfo:$DATA"
+if saved:
+    # Si rsync ha copiado un icono del origen, ese icono tiene prioridad.
+    if read_attribute(icon) is None:
+        for key, hex_value in json.loads(saved).items():
+            if read_attribute(key) is None:
+                os.setxattr(path, key, bytes.fromhex(hex_value),
+                            os.XATTR_CREATE, follow_symlinks=False)
+else:
+    icon_value = read_attribute(icon)
+    if icon_value is not None:
+        metadata = {icon: icon_value.hex()}
+        info_value = read_attribute(info)
+        if info_value is not None:
+            metadata[info] = info_value.hex()
+        print(json.dumps(metadata))
+PYICON
+}
+
 ejecutar_rsync_con_reintentos() {
 	local source_dir="$1"
 	local rsync_destination="$2"
 	local folder="$3"
 	local attempt=1
 	local status=20
+	local icono_guardado=
 
 	while [ "$attempt" -le "$MAX_RETRIES" ]; do
 		CURRENT_STEP="Validación del USB antes del intento $attempt de $folder"
@@ -106,12 +146,16 @@ ejecutar_rsync_con_reintentos() {
 
 		echo "🔄 Intento $attempt/$MAX_RETRIES: $folder"
 
-		if mac_mirror_copiar \
-			"$source_dir" \
-			"$rsync_destination"; then
+		if [ "${#DRY_RUN[@]}" -eq 0 ]; then
+			icono_guardado="$(metadatos_icono_destino "${rsync_destination%/}")" || return 20
+		fi
+		status=0
+		mac_mirror_copiar "$source_dir" "$rsync_destination" || status="$?"
+		if [ -n "$icono_guardado" ]; then
+			metadatos_icono_destino "${rsync_destination%/}" "$icono_guardado" || return 20
+		fi
+		if [ "$status" -eq 0 ]; then
 			return 0
-		else
-			status="$?"
 		fi
 
 		if [ "$attempt" -lt "$MAX_RETRIES" ]; then

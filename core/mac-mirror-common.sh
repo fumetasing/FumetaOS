@@ -20,7 +20,7 @@ mac_mirror_enviar_telegram() {
 
 mac_mirror_configurar_rsync() {
     RSYNC_DELETE_OPTIONS=(-a --no-owner --no-group --dry-run --delete-delay --itemize-changes --out-format='%i' --mkpath)
-    RSYNC_COPY_OPTIONS=(-a --chown=server:server --delete-delay --partial --human-readable --stats --progress --mkpath)
+    RSYNC_COPY_OPTIONS=(-a --xattrs --chown=server:server --delete-delay --partial --human-readable --stats --progress --mkpath)
 }
 
 mac_mirror_usb_disponible() {
