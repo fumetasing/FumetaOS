@@ -55,7 +55,7 @@ APT de Ubuntu se desactivan para evitar actualizaciones fuera de la cadena.
 
 ## Comandos principales
 
-```bash
+```text
 fumetaos help
 fumetaos version
 fumetaos doctor
