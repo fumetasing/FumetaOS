@@ -73,6 +73,14 @@ comprobar_disco() {
 	esac
 }
 
+wd_ultima_prueba_correcta() {
+	local unidad=fumetaos-smart-short-test.service
+	[ "$(systemctl show "$unidad" -p Result --value)" = success ] &&
+		journalctl -q -u "$unidad" --invocation=0 --since "60 hours ago" \
+			--grep "WD USB: pruebas SMART cortas terminadas sin errores" -n 1 -o cat --no-pager |
+			grep -q "WD USB: pruebas SMART cortas terminadas sin errores"
+}
+
 comprobar_disco "$SSD_DEVICE"
 comprobar_disco "$HDD_DEVICE"
 
@@ -87,12 +95,25 @@ if [ "$WATCH" -eq 0 ]; then
 		fi
 		resultado=0
 		salud="$(smartctl_cmd "${opciones[@]}" -H "$wd" 2>&1)" || resultado=$?
+		if [ "${FUMETAOS_SMART_WAKE_WD:-0}" = 1 ]; then
+			for intento in 1 2 3; do
+				case "$salud" in
+				*PASSED* | *FAILED*) break ;;
+				esac
+				sleep 3
+				resultado=0
+				salud="$(smartctl_cmd -d sat -H "$wd" 2>&1)" || resultado=$?
+			done
+		fi
+
 		case "$salud" in
 			*PASSED*) mostrar_correcto 'USB WD' ;;
 			*FAILED*) mostrar_fallo 'USB WD' ;;
 			*)
 				if [ "$resultado" -eq 3 ] && [[ "$salud" == *'Device is in'* ]]; then
 					echo 'ℹ️ USB WD: en reposo'
+				elif [ "${FUMETAOS_SMART_WAKE_WD:-0}" = 1 ] && wd_ultima_prueba_correcta; then
+					echo '✅ USB WD (última prueba SMART correcta)'
 				else
 					mostrar_no_disponible 'USB WD'
 				fi

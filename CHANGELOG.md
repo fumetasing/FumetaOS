@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.52
+
+- Los informes de Telegram reintentan la lectura SMART del USB WD si tarda en responder al despertar.
+- Si la lectura sigue sin estar disponible, el informe identifica el último resultado correcto cuando hay una prueba corta reciente que lo confirma.
+
 ## v2.4.51
 
 - Añade el USB WD a la prueba SMART corta. Los informes de Telegram pueden despertarlo para consultar su estado SMART.
