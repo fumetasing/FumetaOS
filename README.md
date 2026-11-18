@@ -42,9 +42,11 @@ Zona horaria: Europe/Madrid.
 - Cadena nocturna a las 00:30: copia local → Time Capsule a Data WD → recuperación
   cifrada y VM → espejo general a Data WD → actualización de Ubuntu → limpieza Docker.
 - Verificación Restic los lunes o recuperación de una cita semanal perdida.
-- SMART de HDD y SSD al final de la cadena: corto de martes a domingo y largo los lunes,
-  después de la verificación cifrada; sin cita mensual ni hora independiente.
-- El USB WD se añade a la prueba SMART corta de martes a domingo.
+- Prueba SMART corta al final de la cadena de martes a domingo, en el HDD Datos,
+  el SSD Sistema y el USB WD si está conectado.
+- Prueba SMART larga los lunes, después de la verificación cifrada, en el HDD
+  Datos y el SSD Sistema. Se ejecuta en segundo plano y los discos siguen
+  accesibles durante la prueba. Consulta la [guía de SMART](docs/SMART-AL-FINAL-DE-LA-CADENA.md).
 - Los informes de Telegram de las 07:00 y 21:30 muestran el último resultado
   SMART nocturno del USB WD sin despertarlo. La sección Discos agrupa Data WD y
   Time Capsule. Si falla la recuperación automática de Time Capsule, se envía
