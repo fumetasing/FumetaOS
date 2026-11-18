@@ -45,8 +45,8 @@ registrar_resultado() {
 
 ejecutar_seccion() {
 	local title="$1"
-	local script="$2"
-	local status
+	shift
+	local script status
 
 	if [ "$TELEGRAM" -eq 1 ]; then
 		separator
@@ -56,10 +56,11 @@ ejecutar_seccion() {
 
 	echo "$title"
 
-	"$script"
-	status=$?
-
-	registrar_resultado "$status"
+	for script in "$@"; do
+		"$script"
+		status=$?
+		registrar_resultado "$status"
+	done
 }
 
 comprobar_silenciosamente() {
@@ -135,10 +136,6 @@ ejecutar_seccion \
 	/opt/fumetaos/modules/monitor/services.sh
 
 ejecutar_seccion \
-	"💾 Time Capsule" \
-	/opt/fumetaos/modules/monitor/timecapsule.sh
-
-ejecutar_seccion \
 	"🔒 Seguridad" \
 	/opt/fumetaos/modules/monitor/security.sh
 
@@ -157,7 +154,8 @@ ejecutar_seccion \
 
 ejecutar_seccion \
 	"💾 Discos" \
-	/opt/fumetaos/modules/monitor/disks.sh
+	/opt/fumetaos/modules/monitor/disks.sh \
+	/opt/fumetaos/modules/monitor/timecapsule.sh
 
 ejecutar_seccion \
 	"🌡️ Temperatura" \

@@ -11,12 +11,22 @@ run_case() (
     SHORT_LOCK="$TEST_DIR/$scenario.lock"
     HDD_DEVICE=hdd
     SSD_DEVICE=ssd
+    WD_USB_DEVICE=
+    case "$scenario" in
+        wd_success|wd_bad_log) WD_USB_DEVICE=wd ;;
+    esac
     TEST_LOG="$TEST_DIR/$scenario.log"
     TEST_STARTED="$TEST_DIR/$scenario.started"
     : >"$TEST_LOG"
     sleep() { :; }
     smartctl_cmd() {
-        printf '%s %s %s\n' "$@" >>"$TEST_LOG"
+        printf '%s\n' "$*" >>"$TEST_LOG"
+        if [ "$1" = -d ]; then
+            [ "$2" = sat ] && [ "${@: -1}" = wd ] || return 1
+            shift 2
+        elif [ "${@: -1}" = wd ]; then
+            return 1
+        fi
         case "$1" in
         -t)
             [ "$scenario" != start_failure ] || return 1
@@ -35,7 +45,7 @@ run_case() (
         -l)
             if [ "$scenario" = wrong_test ]; then
                 echo '# 1 Extended offline Completed without error 00% 1000 -'
-            elif [ "$scenario" = bad_log ]; then
+            elif [ "$scenario" = bad_log ] || { [ "$scenario" = wd_bad_log ] && [ "${@: -1}" = wd ]; }; then
                 echo '# 1 Short offline Completed: read failure 00% 1000 123'
             else
                 echo '# 1 Short offline Completed without error 00% 1000 -'
@@ -53,13 +63,21 @@ run_case() (
     if [ "$scenario" = busy ] || [ "$scenario" = unreadable ]; then
         ! grep -q '^-t ' "$TEST_LOG" || exit 1
     fi
+    if [ "$scenario" = wd_success ]; then
+        [ "$(grep -c '^-t short ' "$TEST_LOG")" -eq 2 ]
+        grep -Fxq -- '-d sat -t short wd' "$TEST_LOG"
+        grep -Fxq -- '-d sat -l selftest wd' "$TEST_LOG"
+        grep -q 'WD USB: pruebas' "$TEST_DIR/$scenario.output"
+    fi
     if [ "$scenario" = success ]; then
         [ "$(grep -c '^-t short ' "$TEST_LOG")" -eq 2 ] || exit 1
     fi
 )
 
 run_case success 0
+run_case wd_success 0
+run_case wd_bad_log 20
 for scenario in busy unreadable start_failure timeout failed_result wrong_test bad_log bad_health; do
     run_case "$scenario" 20
 done
-echo '✅ SMART corto: nueve escenarios simulados; sin pruebas ni esperas reales.'
+echo '✅ SMART corto: once escenarios simulados; sin pruebas ni esperas reales.'

@@ -1,5 +1,11 @@
 # FumetaOS Changelog
 
+## v2.4.51
+
+- Añade el USB WD a la prueba SMART corta. Los informes de Telegram pueden despertarlo para consultar su estado SMART.
+- Mueve Data WD y Time Capsule a la sección Discos. Time Capsule muestra el espacio libre y el uso cuando está disponible.
+- Envía un aviso de Telegram con el diagnóstico y los intentos realizados si falla la recuperación automática de Time Capsule.
+
 ## v2.4.50
 
 - Los espejos nocturnos a Data WD copian los atributos extendidos de archivos y carpetas, incluidos los metadatos de Finder expuestos por el origen. Los archivos de vistas `.DS_Store` siguen incluidos.

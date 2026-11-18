@@ -15,6 +15,13 @@ CRITICAL_USAGE=95
 
 ERROR=0
 
+mostrar_detalles() {
+	echo "   SMB: $TIMECAPSULE_MOUNT"
+	echo "   CasaOS: $CASAOS_MOUNT"
+	echo "   Protocolo configurado: SMB 3.1.1"
+	echo "   Acceso: $1"
+}
+
 if [ ! -x "$SMB_CLIENT" ]; then
 
 	echo "🔴 Cliente SMB no disponible"
@@ -50,6 +57,7 @@ elif ! ls "$CASAOS_MOUNT" >/dev/null 2>&1; then
 	ERROR=20
 
 else
+	acceso_disponible=1
 	ESPACIO="$(
 		df -hP "$TIMECAPSULE_MOUNT" |
 			awk 'NR == 2 { gsub("%", "", $5); print $4 "|" $5 }'
@@ -74,10 +82,9 @@ else
 		echo "🟢 Time Capsule SMB"
 	fi
 
-	echo "   SMB: $TIMECAPSULE_MOUNT"
-	echo "   CasaOS: $CASAOS_MOUNT"
-	echo "   Protocolo: SMB 3.1.1"
-	echo "   Acceso: disponible"
+	if [ "$ERROR" -ne 0 ] || [ "${1:-}" = "--detalles" ]; then
+		mostrar_detalles disponible
+	fi
 	echo "   Libre: $LIBRE"
 	echo "   Uso:   ${USO}%"
 
@@ -93,6 +100,10 @@ else
 		fi
 		;;
 	esac
+fi
+
+if [ "${acceso_disponible:-0}" -eq 0 ]; then
+	mostrar_detalles "no disponible"
 fi
 
 exit "$ERROR"

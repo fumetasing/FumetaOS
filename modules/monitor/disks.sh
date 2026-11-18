@@ -64,4 +64,19 @@ check_disk() {
 check_disk "$SSD_NAME" "/"
 check_disk "$HDD_NAME" "/mnt/datos"
 
+mostrar_usb() {
+    local wd=/mnt/data-wd
+    if [ "$(findmnt -n -o UUID -M "$wd")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ]; then
+        echo "🟢 Data WD"
+        df -h --output=avail,pcent -- "$wd" | awk 'NR==2 {print "   Libre: " $1; print "   Uso: " $2}'
+    else
+        echo "🔴 Data WD no está montado en Ubuntu"
+        ERROR=20
+    fi
+}
+
+if [ "$WATCH" -eq 0 ]; then
+	mostrar_usb
+fi
+
 exit "$ERROR"

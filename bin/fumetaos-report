@@ -7,6 +7,6 @@
 
 set -o pipefail
 
-/opt/fumetaos/bin/fumetaos-health |
+FUMETAOS_SMART_WAKE_WD=1 /opt/fumetaos/bin/fumetaos-health |
 	/opt/fumetaos/bin/fumetaos-report-format |
 	/opt/fumetaos/bin/telegram-notify

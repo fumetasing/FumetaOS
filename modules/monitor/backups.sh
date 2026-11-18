@@ -185,17 +185,6 @@ ha_fallado() {
 	[ "${BAD[$idx]:-0}" -gt "${OK[$idx]:-0}" ]
 }
 
-mostrar_usb() {
-    local wd=/mnt/data-wd
-    if [ "$(findmnt -n -o UUID -M "$wd")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ]; then
-        echo "🟢 Data WD en Ubuntu"
-        df -h --output=avail,pcent -- "$wd" | awk 'NR==2 {print "   Libre: " $1; print "   Uso: " $2}'
-    else
-        echo "🔴 Data WD no está montado en Ubuntu"
-        elevar_error 20
-    fi
-}
-
 mostrar_copia() {
 	local idx="$1"
 	local unit="${UNITS[$1]}"
@@ -312,11 +301,6 @@ done
 for timer in "${TIMERS[@]}"; do
 	leer_timer "$timer"
 done
-
-if [ "$#" -eq 0 ]; then
-	echo
-	mostrar_usb
-fi
 
 echo
 mostrar_copia \

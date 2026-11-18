@@ -44,7 +44,11 @@ Zona horaria: Europe/Madrid.
 - Verificación Restic los lunes o recuperación de una cita semanal perdida.
 - SMART de HDD y SSD al final de la cadena: corto de martes a domingo y largo los lunes,
   después de la verificación cifrada; sin cita mensual ni hora independiente.
-- Informes Telegram a las 07:00 y 21:30 mediante un override de systemd.
+- El USB WD se añade a la prueba SMART corta de martes a domingo.
+- Los informes de Telegram de las 07:00 y 21:30 despiertan el USB WD si está en
+  reposo para consultar su estado SMART. La sección Discos agrupa Data WD y
+  Time Capsule. Si falla la recuperación automática de Time Capsule, se envía
+  un aviso separado con el diagnóstico.
 - Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;
   retirada de torrents terminados e inactivos cada 5; limpieza de histórico a las 02:00.
 

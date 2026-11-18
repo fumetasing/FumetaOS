@@ -166,10 +166,34 @@ recuperar() {
 		return 20
 	fi
 
-	reiniciar_jellyfin
-	validar_jellyfin
+	if ! reiniciar_jellyfin || ! validar_jellyfin; then
+		return 20
+	fi
 
 	echo "✅ SMB y Jellyfin recuperados automáticamente"
+}
+
+recuperar_y_avisar() {
+	local aviso=/run/fumetaos-timecapsule-watch.alertado
+	local registro diagnostico estado
+
+	if registro="$(recuperar 2>&1)"; then
+		printf '%s\n' "$registro"
+		rm -f -- "$aviso"
+		return 0
+	else
+		estado=$?
+	fi
+	printf '%s\n' "$registro"
+
+	if [ ! -e "$aviso" ]; then
+		diagnostico="$(timeout 40 /opt/fumetaos/modules/monitor/timecapsule.sh --detalles 2>&1)" || true
+		if printf '🔴 Time Capsule: recuperación fallida\n\n%s\n\n%s\n' "$diagnostico" "$registro" |
+			timeout 20 /opt/fumetaos/bin/telegram-notify; then
+			touch -- "$aviso"
+		fi
+	fi
+	return "$estado"
 }
 
 case "${1:-}" in
@@ -177,7 +201,7 @@ check)
 	comprobar
 	;;
 recover)
-	recuperar
+	recuperar_y_avisar
 	;;
 *)
 	echo "Uso:"
