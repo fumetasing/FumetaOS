@@ -45,8 +45,8 @@ Zona horaria: Europe/Madrid.
 - SMART de HDD y SSD al final de la cadena: corto de martes a domingo y largo los lunes,
   después de la verificación cifrada; sin cita mensual ni hora independiente.
 - El USB WD se añade a la prueba SMART corta de martes a domingo.
-- Los informes de Telegram de las 07:00 y 21:30 despiertan el USB WD si está en
-  reposo para consultar su estado SMART. La sección Discos agrupa Data WD y
+- Los informes de Telegram de las 07:00 y 21:30 muestran el último resultado
+  SMART nocturno del USB WD sin despertarlo. La sección Discos agrupa Data WD y
   Time Capsule. Si falla la recuperación automática de Time Capsule, se envía
   un aviso separado con el diagnóstico.
 - Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;

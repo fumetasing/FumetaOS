@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.53
+
+- Los informes manuales y programados muestran el último resultado SMART nocturno del USB WD sin despertar el disco.
+- La prueba SMART corta registra explícitamente los fallos de salud SMART para que aparezcan en el informe.
+
 ## v2.4.52
 
 - Los informes de Telegram reintentan la lectura SMART del USB WD si tarda en responder al despertar.

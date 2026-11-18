@@ -71,7 +71,12 @@ smart_short_run() {
         fi
     done
     for device in "${devices[@]}"; do
-        status="$(smart_short_ctl -H "$device" 2>&1)" || return 20
+        status="$(smart_short_ctl -H "$device" 2>&1)" || {
+            if [[ "$status" == *FAILED* ]]; then
+                smart_short_error "Salud SMART incorrecta en $device"
+            fi
+            return 20
+        }
         printf '%s\n' "$status" | grep -q PASSED || return 20
     done
     if [ -n "${WD_USB_DEVICE:-}" ]; then
