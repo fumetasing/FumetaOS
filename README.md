@@ -61,13 +61,14 @@ APT de Ubuntu se desactivan para evitar actualizaciones fuera de la cadena.
 
 ## Comandos principales
 
-```text
+```bash
 fumetaos help
 fumetaos version
 fumetaos doctor
 fumetaos config
 fumetaos status
 fumetaos health
+fumetaos report
 fumetaos services
 fumetaos history
 fumetaos app list
