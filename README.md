@@ -48,8 +48,8 @@ Zona horaria: Europe/Madrid.
   Datos y el SSD Sistema. Se ejecuta en segundo plano y los discos siguen
   accesibles durante la prueba. Consulta la [guía de SMART](docs/SMART-AL-FINAL-DE-LA-CADENA.md).
 - Los informes de Telegram de las 07:00 y 21:30 muestran el último resultado
-  SMART nocturno del USB WD sin despertarlo. La sección Discos agrupa Data WD y
-  Time Capsule. Si falla la recuperación automática de Time Capsule, se envía
+  SMART nocturno del USB WD sin despertarlo. La sección Discos muestra Data WD,
+  Time Machine WD y Time Capsule SMB. Si falla la recuperación de Time Capsule, se envía
   un aviso separado con el diagnóstico.
 - Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;
   retirada de torrents terminados e inactivos cada 5; limpieza de histórico a las 02:00.

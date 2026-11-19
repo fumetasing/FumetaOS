@@ -64,19 +64,23 @@ check_disk() {
 check_disk "$SSD_NAME" "/"
 check_disk "$HDD_NAME" "/mnt/datos"
 
-mostrar_usb() {
-    local wd=/mnt/data-wd
-    if [ "$(findmnt -n -o UUID -M "$wd")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ]; then
-        echo "🟢 Data WD"
-        df -h --output=avail,pcent -- "$wd" | awk 'NR==2 {print "   Libre: " $1; print "   Uso: " $2}'
+mostrar_volumen_wd() {
+    local nombre="$1"
+    local ruta="$2"
+    local uuid="$3"
+
+    if [ "$(findmnt -n -o UUID -M "$ruta")" = "$uuid" ]; then
+        echo "🟢 $nombre"
+        df -h --output=avail,pcent -- "$ruta" | awk 'NR==2 {print "   Libre: " $1; print "   Uso: " $2}'
     else
-        echo "🔴 Data WD no está montado en Ubuntu"
+        echo "🔴 $nombre no está montado en Ubuntu"
         ERROR=20
     fi
 }
 
 if [ "$WATCH" -eq 0 ]; then
-	mostrar_usb
+	mostrar_volumen_wd "Data WD" /mnt/data-wd 87d65071-48b3-439c-8e8d-4216f3c60d5d
+	mostrar_volumen_wd "Time Machine WD" /mnt/time-machine-wd 707e3c0f-2728-4381-97f2-800bf12c668d
 fi
 
 exit "$ERROR"

@@ -1,5 +1,9 @@
 # FumetaOS Changelog
 
+## v2.4.54
+
+- El informe de Telegram muestra el espacio libre y el uso de Time Machine WD en Discos, entre Data WD y Time Capsule SMB.
+
 ## v2.4.53
 
 - Los informes manuales y programados muestran el último resultado SMART nocturno del USB WD sin despertar el disco.
