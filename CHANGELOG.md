@@ -1,5 +1,9 @@
 # FumetaOS Changelog
 
+## v2.4.55
+
+- Telegram avisa cuando Time Capsule vuelve a responder por SMB desde CasaOS tras una alerta de recuperación fallida. Si el envío falla, el vigilante vuelve a intentarlo cuando confirma el acceso.
+
 ## v2.4.54
 
 - El informe de Telegram muestra el espacio libre y el uso de Time Machine WD en Discos, entre Data WD y Time Capsule SMB.

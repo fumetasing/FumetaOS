@@ -179,7 +179,14 @@ recuperar_y_avisar() {
 
 	if registro="$(recuperar 2>&1)"; then
 		printf '%s\n' "$registro"
-		rm -f -- "$aviso"
+		if [ -e "$aviso" ]; then
+			if printf '🟢 Time Capsule: servicio recuperado\n\n✅ Lectura SMB verificada desde CasaOS.\n' |
+				timeout 20 /opt/fumetaos/bin/telegram-notify; then
+				rm -f -- "$aviso"
+			else
+				echo "⚠️ No se pudo enviar el aviso de recuperación; se reintentará"
+			fi
+		fi
 		return 0
 	else
 		estado=$?
