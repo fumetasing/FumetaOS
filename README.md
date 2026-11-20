@@ -47,10 +47,14 @@ Zona horaria: Europe/Madrid.
 - Prueba SMART larga los lunes, después de la verificación cifrada, en el HDD
   Datos y el SSD Sistema. Se ejecuta en segundo plano y los discos siguen
   accesibles durante la prueba. Consulta la [guía de SMART](docs/SMART-AL-FINAL-DE-LA-CADENA.md).
-- Los informes de Telegram de las 07:00 y 21:30 muestran el último resultado
-  SMART nocturno del USB WD sin despertarlo. La sección Discos muestra Data WD,
-  Time Machine WD y Time Capsule SMB. Con la configuración predeterminada, los
-  discos aparecen en amarillo desde el 90 % y en rojo desde el 93 %. Si falla
+- Los informes programados de Telegram se envían a las 07:15 y a las 21:45
+  mediante un ajuste local del temporizador. Los informes programados consultan el
+  estado SMART en directo y pueden despertar los tres discos. El informe manual
+  respeta el reposo y muestra el último resultado nocturno del USB WD. En este
+  servidor, el sondeo periódico de Ubuntu con `smartd` omite los discos en reposo.
+- La sección Discos muestra Data WD, Time Machine WD y Time Capsule SMB. Con la
+  configuración predeterminada, los discos aparecen en amarillo desde el 90 %
+  y en rojo desde el 93 %. Si falla
   la recuperación de Time Capsule, Telegram envía el diagnóstico y avisa cuando
   se vuelve a verificar la lectura desde CasaOS.
 - En este servidor, Ubuntu usa `hd-idle` para poner el HDD Datos y el USB WD

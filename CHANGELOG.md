@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.58
+
+- Los informes programados pueden despertar los tres discos para consultar SMART. Las consultas directas fuera del servicio programado omiten los discos en reposo y el USB WD se muestra según su último resultado nocturno.
+- Documenta los horarios efectivos de los informes de esta instalación, a las 07:15 y a las 21:45.
+
 ## v2.4.57
 
 - Documenta el ajuste de reposo de esta instalación. Ubuntu usa `hd-idle` con tres minutos de inactividad para el HDD Datos y el USB WD.

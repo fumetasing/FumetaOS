@@ -6,4 +6,5 @@ After=network-online.target
 Type=oneshot
 User=server
 SuccessExitStatus=10
+Environment=FUMETAOS_REPORT_WAKE_SMART=1
 ExecStart=/opt/fumetaos/bin/fumetaos-report
