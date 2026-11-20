@@ -18,64 +18,53 @@ ERROR=0
 check_disk() {
 	local name="$1"
 	local mount="$2"
-	local free
-	local use
+	local free use color
 
-	read -r free use < <(
-		df -P -h "$mount" |
-			awk 'NR == 2 {
-                gsub("%", "", $5)
-                print $4, $5
-            }'
-	)
-
-	if [ "$use" -lt "$DISK_WARNING" ]; then
-		if [ "$WATCH" -eq 0 ]; then
-			echo "🟢 $name"
-			echo "   Libre: $free"
-			echo "   Uso:   ${use}%"
-			echo
-		fi
-	elif [ "$use" -lt "$DISK_CRITICAL" ]; then
-		if [ "$WATCH" -eq 0 ]; then
-			echo "🟡 $name"
-			echo "   Libre: $free"
-			echo "   Uso:   ${use}%"
-			echo
-		else
-			echo "$name al ${use}%"
-		fi
-
-		ERROR=10
-	else
-		if [ "$WATCH" -eq 0 ]; then
-			echo "🔴 $name"
-			echo "   Libre: $free"
-			echo "   Uso:   ${use}%"
-			echo
-		else
-			echo "$name al ${use}%"
-		fi
-
+	if ! read -r free use < <(
+		df -P -h -- "$mount" | awk 'NR == 2 { sub(/%$/, "", $5); print $4, $5 }'
+	) || [[ ! "$use" =~ ^[0-9]+$ ]]; then
+		echo "🔴 $name: no se pudo leer el uso"
 		ERROR=20
+		return
+	fi
+
+	if [ "$use" -ge "$DISK_CRITICAL" ]; then
+		color=🔴
+		ERROR=20
+	elif [ "$use" -ge "$DISK_WARNING" ]; then
+		color=🟡
+		if [ "$ERROR" -eq 0 ]; then
+			ERROR=10
+		fi
+	else
+		color=🟢
+	fi
+
+	if [ "$WATCH" -eq 0 ]; then
+		echo "$color $name"
+		echo "   Libre: $free"
+		echo "   Uso:   ${use}%"
+	elif [ "$color" != 🟢 ]; then
+		echo "$name al ${use}%"
 	fi
 }
 
 check_disk "$SSD_NAME" "/"
+if [ "$WATCH" -eq 0 ]; then echo; fi
 check_disk "$HDD_NAME" "/mnt/datos"
+if [ "$WATCH" -eq 0 ]; then echo; fi
 
 mostrar_volumen_wd() {
-    local nombre="$1"
-    local ruta="$2"
-    local uuid="$3"
+	local nombre="$1"
+	local ruta="$2"
+	local uuid="$3"
 
-    if [ "$(findmnt -n -o UUID -M "$ruta")" = "$uuid" ]; then
-        echo "🟢 $nombre"
-        df -h --output=avail,pcent -- "$ruta" | awk 'NR==2 {print "   Libre: " $1; print "   Uso: " $2}'
-    else
-        echo "🔴 $nombre no está montado en Ubuntu"
-        ERROR=20
-    fi
+	if [ "$(findmnt -n -o UUID -M "$ruta")" = "$uuid" ]; then
+		check_disk "$nombre" "$ruta"
+	else
+		echo "🔴 $nombre no está montado en Ubuntu"
+		ERROR=20
+	fi
 }
 
 if [ "$WATCH" -eq 0 ]; then

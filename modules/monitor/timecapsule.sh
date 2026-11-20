@@ -5,13 +5,11 @@
 # Monitor Time Capsule
 ###########################################################
 
+source /opt/fumetaos/core/common.sh
+
 TIMECAPSULE_MOUNT="/mnt/timecapsule"
 CASAOS_MOUNT="/DATA/TimeCapsule"
 SMB_CLIENT="/usr/sbin/mount.cifs"
-
-WARNING_USAGE=90
-HIGH_USAGE=93
-CRITICAL_USAGE=95
 
 ERROR=0
 
@@ -69,13 +67,10 @@ else
 	if [[ ! "$USO" =~ ^[0-9]+$ ]]; then
 		echo "🔴 No se pudo determinar el uso de Time Capsule"
 		ERROR=20
-	elif [ "$USO" -ge "$CRITICAL_USAGE" ]; then
+	elif [ "$USO" -ge "$DISK_CRITICAL" ]; then
 		echo "🔴 Time Capsule SMB — espacio crítico"
 		ERROR=20
-	elif [ "$USO" -ge "$HIGH_USAGE" ]; then
-		echo "🟠 Time Capsule SMB — espacio muy reducido"
-		ERROR=10
-	elif [ "$USO" -ge "$WARNING_USAGE" ]; then
+	elif [ "$USO" -ge "$DISK_WARNING" ]; then
 		echo "🟡 Time Capsule SMB — vigilar espacio"
 		ERROR=10
 	else
@@ -91,12 +86,10 @@ else
 	case "$USO" in
 	'' | *[!0-9]*) ;;
 	*)
-		if [ "$USO" -ge "$CRITICAL_USAGE" ]; then
-			echo "   Umbral: crítico desde ${CRITICAL_USAGE}%"
-		elif [ "$USO" -ge "$HIGH_USAGE" ]; then
-			echo "   Umbral: muy reducido desde ${HIGH_USAGE}%"
-		elif [ "$USO" -ge "$WARNING_USAGE" ]; then
-			echo "   Umbral: aviso desde ${WARNING_USAGE}%"
+		if [ "$USO" -ge "$DISK_CRITICAL" ]; then
+			echo "   Umbral: crítico desde ${DISK_CRITICAL}%"
+		elif [ "$USO" -ge "$DISK_WARNING" ]; then
+			echo "   Umbral: aviso desde ${DISK_WARNING}%"
 		fi
 		;;
 	esac

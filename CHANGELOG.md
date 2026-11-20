@@ -1,5 +1,9 @@
 # FumetaOS Changelog
 
+## v2.4.56
+
+- La sección Discos aplica los umbrales de uso a todos los volúmenes, incluidos Data WD, Time Machine WD y Time Capsule SMB. Los valores predeterminados muestran amarillo desde el 90 % y rojo desde el 93 %.
+
 ## v2.4.55
 
 - Telegram avisa cuando Time Capsule vuelve a responder por SMB desde CasaOS tras una alerta de recuperación fallida. Si el envío falla, el vigilante vuelve a intentarlo cuando confirma el acceso.

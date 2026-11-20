@@ -49,9 +49,10 @@ Zona horaria: Europe/Madrid.
   accesibles durante la prueba. Consulta la [guía de SMART](docs/SMART-AL-FINAL-DE-LA-CADENA.md).
 - Los informes de Telegram de las 07:00 y 21:30 muestran el último resultado
   SMART nocturno del USB WD sin despertarlo. La sección Discos muestra Data WD,
-  Time Machine WD y Time Capsule SMB. Si falla la recuperación de Time Capsule,
-  Telegram envía el diagnóstico y avisa cuando se vuelve a verificar la lectura
-  desde CasaOS.
+  Time Machine WD y Time Capsule SMB. Con la configuración predeterminada, los
+  discos aparecen en amarillo desde el 90 % y en rojo desde el 93 %. Si falla
+  la recuperación de Time Capsule, Telegram envía el diagnóstico y avisa cuando
+  se vuelve a verificar la lectura desde CasaOS.
 - Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;
   retirada de torrents terminados e inactivos cada 5; limpieza de histórico a las 02:00.
 
