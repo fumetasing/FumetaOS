@@ -53,6 +53,10 @@ Zona horaria: Europe/Madrid.
   discos aparecen en amarillo desde el 90 % y en rojo desde el 93 %. Si falla
   la recuperación de Time Capsule, Telegram envía el diagnóstico y avisa cuando
   se vuelve a verificar la lectura desde CasaOS.
+- En este servidor, Ubuntu usa `hd-idle` para poner el HDD Datos y el USB WD
+  en reposo tras tres minutos de inactividad. Data WD y Time Machine WD son
+  particiones del mismo disco. Los accesos a cualquiera de ellas reinician el
+  plazo de inactividad del USB WD.
 - Watch cada 5 minutos; histórico cada 10; recuperación de Time Capsule cada 3;
   retirada de torrents terminados e inactivos cada 5; limpieza de histórico a las 02:00.
 

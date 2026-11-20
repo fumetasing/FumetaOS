@@ -1,5 +1,9 @@
 # FumetaOS Changelog
 
+## v2.4.57
+
+- Documenta el ajuste de reposo de esta instalación. Ubuntu usa `hd-idle` con tres minutos de inactividad para el HDD Datos y el USB WD.
+
 ## v2.4.56
 
 - La sección Discos aplica los umbrales de uso a todos los volúmenes, incluidos Data WD, Time Machine WD y Time Capsule SMB. Los valores predeterminados muestran amarillo desde el 90 % y rojo desde el 93 %.
