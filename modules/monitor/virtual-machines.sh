@@ -61,14 +61,14 @@ for VM in "${VMS[@]}"; do
 	"shut off")
 		STOPPED=$((STOPPED + 1))
 
-		echo "⚪ $VM"
+		echo "🟢 $VM"
 		echo "   Estado: apagada"
 		;;
 	paused | pmsuspended)
 		PROBLEMS=$((PROBLEMS + 1))
 		ERROR=10
 
-		echo "🟡 $VM"
+		echo "🔴 $VM"
 		echo "   Estado: $STATE"
 		;;
 	*)

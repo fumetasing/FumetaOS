@@ -32,7 +32,7 @@ check_disk() {
 		color=🔴
 		ERROR=20
 	elif [ "$use" -ge "$DISK_WARNING" ]; then
-		color=🟡
+		color=🟠
 		if [ "$ERROR" -eq 0 ]; then
 			ERROR=10
 		fi

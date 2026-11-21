@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.59
+
+- El informe usa naranja para los avisos que antes se mostraban en amarillo.
+- Las máquinas virtuales aparecen en verde al estar encendidas o apagadas, y en rojo si el monitor detecta un problema. El estado se muestra debajo de cada máquina.
+
 ## v2.4.58
 
 - Los informes programados pueden despertar los tres discos para consultar SMART. Las consultas directas fuera del servicio programado omiten los discos en reposo y el USB WD se muestra según su último resultado nocturno.

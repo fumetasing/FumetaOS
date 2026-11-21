@@ -25,7 +25,7 @@ if [ "$TEMP" -lt "$CPU_WARNING" ]; then
 	exit 0
 elif [ "$TEMP" -lt "$CPU_CRITICAL" ]; then
 	if [ "$WATCH" -eq 0 ]; then
-		echo "🌡️ CPU: ${TEMP}°C 🟡"
+		echo "🌡️ CPU: ${TEMP}°C 🟠"
 	else
 		echo "CPU a ${TEMP}°C"
 	fi

@@ -53,7 +53,7 @@ Zona horaria: Europe/Madrid.
   respeta el reposo y muestra el último resultado nocturno del USB WD. En este
   servidor, el sondeo periódico de Ubuntu con `smartd` omite los discos en reposo.
 - La sección Discos muestra Data WD, Time Machine WD y Time Capsule SMB. Con la
-  configuración predeterminada, los discos aparecen en amarillo desde el 90 %
+  configuración predeterminada, los discos aparecen en naranja desde el 90 %
   y en rojo desde el 93 %. Si falla
   la recuperación de Time Capsule, Telegram envía el diagnóstico y avisa cuando
   se vuelve a verificar la lectura desde CasaOS.

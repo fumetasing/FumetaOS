@@ -31,7 +31,7 @@ version_remota="$(printf '%s' "$release" | jq -er \
 version_remota="${version_remota#v}"
 
 if dpkg --compare-versions "$version_remota" gt "$version_local"; then
-    echo "🟡 CasaOS: nueva versión oficial v$version_remota (actual: v$version_local; revisar el parche antes de actualizar)"
+    echo "🟠 CasaOS: nueva versión oficial v$version_remota (actual: v$version_local; revisar el parche antes de actualizar)"
     exit 10
 fi
 if dpkg --compare-versions "$version_remota" eq "$version_local"; then

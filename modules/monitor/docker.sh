@@ -65,7 +65,7 @@ if [ "$recuperables" -ge "$CRITICO_BYTES" ]; then
         ICONO="🔴"
 elif [ "$recuperables" -ge "$AVISO_BYTES" ]; then
         ERROR=10
-        ICONO="🟡"
+        ICONO="🟠"
 fi
 
 if [ "$WATCH" -eq 1 ]; then

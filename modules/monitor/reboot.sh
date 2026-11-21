@@ -15,7 +15,7 @@ if [ ! -f "$REBOOT_FILE" ]; then
 	exit 0
 fi
 
-echo "🟡 Reinicio pendiente"
+echo "🟠 Reinicio pendiente"
 echo "   Ubuntu requiere reiniciar el servidor"
 
 if [ -s "$PACKAGES_FILE" ]; then

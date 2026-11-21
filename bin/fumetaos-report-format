@@ -41,7 +41,7 @@ while IFS= read -r line; do
 		;;
 
 	"🟢 Estado general:"* | \
-		"🟡 Estado general:"* | \
+		"🟠 Estado general:"* | \
 		"🔴 Estado general:"*)
 		echo "$SEPARATOR"
 		echo

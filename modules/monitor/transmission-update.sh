@@ -73,5 +73,5 @@ if [ "$digest_local" = "$digest_remoto" ]; then
 	exit 0
 fi
 
-echo "🟡 Transmission: actualización disponible (actual: $version_local)"
+echo "🟠 Transmission: actualización disponible (actual: $version_local)"
 exit 10

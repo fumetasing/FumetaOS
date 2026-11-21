@@ -279,7 +279,7 @@ mostrar_copia() {
 
 	case "$level" in
 	10)
-		icon="🟡"
+		icon="🟠"
 		;;
 	20)
 		icon="🔴"
