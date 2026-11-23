@@ -79,7 +79,7 @@ printf '%s\\n' '{"ok":true}'
                 result = self.telegram(body)
                 self.assertNotEqual(result.returncode, 0)
 
-    def long_test(self, status):
+    def long_test(self, status, max_wait=43200):
         self.stub('smartctl', 'exit 99\n')
         reply = ('return 1' if status is None else
                  f"echo 'Self-test execution status: ({status}) test result'")
@@ -91,11 +91,13 @@ id() {{ echo 0; }}
 sleep() {{ touch "{self.folder}/started"; }}
 smartctl_cmd() {{
  case "$1" in
- -t) return 0 ;;
+ -t) touch "{self.folder}/long-running" ;;
  -l) echo '# 1 Extended offline Completed without error 00% 1000 -' ;;
  -H) echo PASSED ;;
  -c)
-   if [[ "$2" == ssd && -e "{self.folder}/started" ]]; then
+   if [[ "$2" == hdd && -e "{self.folder}/long-running" && ! -e "{self.folder}/started" ]]; then
+     echo "Self-test routine in progress"
+   elif [[ "$2" == ssd && -e "{self.folder}/started" ]]; then
      {reply}
    else
      echo 'Self-test execution status: (0) completed without error'
@@ -106,6 +108,7 @@ smartctl_cmd() {{
         return self.run_script('bin/fumetaos-smart-test', {
             'source /opt/fumetaos/core/common.sh': stub,
             'TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"': 'TELEGRAM_NOTIFY=""',
+            'MAX_WAIT_SECONDS=43200': f'MAX_WAIT_SECONDS={max_wait}',
             'LOCK_FILE="/run/lock/fumetaos-smart-test.lock"': f'LOCK_FILE="{self.folder}/test.lock"',
         })
 
@@ -118,11 +121,17 @@ smartctl_cmd() {{
     def test_long_smart_reports_unreadable_ssd_status(self):
         result = self.long_test(None)
         self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
-        self.assertIn('No se pudo consultar el resultado SMART del SSD Sistema', result.stdout)
+        self.assertIn('No se pudo consultar el estado SMART de SSD', result.stdout)
 
     def test_long_smart_accepts_completed_ssd(self):
         result = self.long_test(0)
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_long_smart_reports_in_progress_at_deadline(self):
+        result = self.long_test(0, max_wait=0)
+        self.assertEqual(result.returncode, 21, result.stdout + result.stderr)
+        self.assertIn('prueba larga aún en curso', result.stdout)
+        self.assertNotIn('no terminó correctamente', result.stdout)
 
     def test_disk_monitor_rejects_missing_hdd_mount(self):
         common = '''SSD_NAME=SSD

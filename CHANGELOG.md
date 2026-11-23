@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.62
+
+- Consulta el progreso SMART cada cinco minutos, con un máximo de doce horas, y avisa en naranja si al alcanzar el límite la prueba sigue en curso.
+- Mantiene suspendido el reposo del HDD Datos mientras el servicio espera y lo reactiva al salir.
+
 ## v2.4.61
 
 - Aísla las simulaciones de la prueba SMART larga para que funcionen también en entornos sin smartctl instalado, como GitHub Actions.

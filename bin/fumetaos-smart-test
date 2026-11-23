@@ -9,7 +9,9 @@ source /opt/fumetaos/core/common.sh
 
 TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
 LOCK_FILE="/run/lock/fumetaos-smart-test.lock"
-HDD_WAIT_MINUTES=340
+MAX_WAIT_SECONDS=43200
+POLL_SECONDS=300
+export LC_ALL=C
 
 enviar_telegram() {
 	local mensaje="$1"
@@ -31,6 +33,32 @@ $mensaje
 ⏱️ $(date '+%d/%m/%Y %H:%M')"
 
 	exit 20
+}
+
+esperar_prueba() {
+	local nombre="$1" device="$2" status restante
+
+	while :; do
+		status="$(smartctl_cmd -c "$device" 2>&1)" ||
+			fallar "No se pudo consultar el estado SMART de $nombre"
+		if ! grep -qi 'in progress' <<<"$status"; then
+			return 0
+		fi
+
+		restante=$((LIMITE - SECONDS))
+		if (( restante <= 0 )); then
+			local mensaje="$nombre: prueba larga aún en curso al alcanzar el límite de espera"
+			echo "🟠 $mensaje"
+			enviar_telegram "🟠 FumetaOS SMART
+
+$mensaje
+
+⏱️ $(date '+%d/%m/%Y %H:%M')"
+			exit 21
+		fi
+
+		sleep "$((restante < POLL_SECONDS ? restante : POLL_SECONDS))"
+	done
 }
 
 [ "$(id -u)" -eq 0 ] ||
@@ -70,8 +98,9 @@ smartctl_cmd -t long "$SSD_DEVICE" ||
 	fallar "No se pudo iniciar la prueba larga del SSD Sistema"
 
 echo
-echo "⏳ Esperando hasta $HDD_WAIT_MINUTES minutos para completar las pruebas"
-sleep "${HDD_WAIT_MINUTES}m"
+echo "⏳ Comprobando el progreso SMART cada cinco minutos, hasta 12 horas"
+LIMITE=$((SECONDS + MAX_WAIT_SECONDS))
+esperar_prueba "$HDD_NAME" "$HDD_DEVICE"
 
 echo
 echo "===== VERIFICANDO HDD ====="
@@ -97,12 +126,9 @@ esac
 
 echo
 echo "===== VERIFICANDO SSD ====="
+esperar_prueba "$SSD_NAME" "$SSD_DEVICE"
 ESTADO_SSD="$(smartctl_cmd -c "$SSD_DEVICE" 2>&1)" ||
 	fallar "No se pudo consultar el resultado SMART del SSD Sistema"
-
-if grep -qi 'in progress' <<<"$ESTADO_SSD"; then
-	fallar "SSD Sistema: la prueba larga sigue en curso tras el tiempo previsto"
-fi
 
 if ! grep -Eq 'Self-test execution status:[[:space:]]*\([[:space:]]*0\)' <<<"$ESTADO_SSD"; then
 	fallar "SSD Sistema: la prueba larga no terminó correctamente"
