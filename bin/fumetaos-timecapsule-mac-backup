@@ -61,11 +61,11 @@ manejar_error() {
 }
 
 preparar_destinos_wd() {
-    local dir
-    for dir in "$MAC_ROOT/TimeCapsule" "$MAC_DESTINATION" "${FOLDERS[@]/#/$MAC_DESTINATION/}"; do
-        [ ! -L "$dir" ] || mostrar_error "Enlace en destino: $dir"
-        if [ "${#DRY_RUN[@]}" -eq 0 ]; then mkdir -p -- "$dir"; fi
-    done
+	local dir
+	for dir in "$MAC_ROOT/TimeCapsule" "$MAC_DESTINATION" "${FOLDERS[@]/#/$MAC_DESTINATION/}"; do
+		[ ! -L "$dir" ] || mostrar_error "Enlace en destino: $dir"
+		if [ "${#DRY_RUN[@]}" -eq 0 ]; then mkdir -p -- "$dir"; fi
+	done
 }
 
 comprobar_borrados_previstos() {

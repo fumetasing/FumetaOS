@@ -25,7 +25,7 @@ prepare_dirs() {
 latest_backup() {
 	find "$DATA_DIR" "$SYSTEM_DIR" -maxdepth 1 -type f \
 		-name "${PREFIX}*.tar.gz" -printf '%T@ %p\n' 2>/dev/null |
-		sort -nr | head -1 | cut -d' ' -f2-
+		sort -nr | sed -n '1p' | cut -d' ' -f2-
 }
 
 create_backup() {

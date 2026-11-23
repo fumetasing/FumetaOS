@@ -34,7 +34,7 @@ crear_respaldo_instalacion() (
 	gzip -t "$copia_datos"
 	contenido=$(tar -tzf "$copia_datos")
 	for archivo in "${esperados[@]}"; do
-		if ! grep -Fxq -- "$archivo" <<< "$contenido"; then
+		if ! grep -Fxq -- "$archivo" <<<"$contenido"; then
 			echo "❌ El respaldo no contiene $archivo." >&2
 			exit 20
 		fi

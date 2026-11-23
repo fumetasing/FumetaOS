@@ -12,38 +12,38 @@ LOCK_FILE="/run/lock/fumetaos-smart-test.lock"
 HDD_WAIT_MINUTES=340
 
 enviar_telegram() {
-        local mensaje="$1"
+	local mensaje="$1"
 
-        if [ -x "$TELEGRAM_NOTIFY" ]; then
-                printf '%s\n' "$mensaje" | "$TELEGRAM_NOTIFY" || true
-        fi
+	if [ -x "$TELEGRAM_NOTIFY" ]; then
+		printf '%s\n' "$mensaje" | "$TELEGRAM_NOTIFY" || true
+	fi
 }
 
 fallar() {
-        local mensaje="$1"
+	local mensaje="$1"
 
-        echo "🔴 $mensaje"
+	echo "🔴 $mensaje"
 
-        enviar_telegram "🚨 FumetaOS SMART
+	enviar_telegram "🚨 FumetaOS SMART
 
 $mensaje
 
 ⏱️ $(date '+%d/%m/%Y %H:%M')"
 
-        exit 20
+	exit 20
 }
 
 [ "$(id -u)" -eq 0 ] ||
-        fallar "La prueba SMART debe ejecutarse como root"
+	fallar "La prueba SMART debe ejecutarse como root"
 
 command -v smartctl >/dev/null 2>&1 ||
-        fallar "smartctl no está disponible"
+	fallar "smartctl no está disponible"
 
 exec 9>"$LOCK_FILE"
 
 if ! flock -n 9; then
-        echo "ℹ️ Ya hay una prueba SMART larga en curso"
-        exit 0
+	echo "ℹ️ Ya hay una prueba SMART larga en curso"
+	exit 0
 fi
 
 echo "🛠️ Prueba SMART larga"
@@ -52,22 +52,22 @@ echo "SSD: $SSD_NAME ($SSD_DEVICE)"
 
 # No interrumpir una prueba que se haya iniciado manualmente.
 for device in "$HDD_DEVICE" "$SSD_DEVICE"; do
-    status="$(smartctl_cmd -c "$device" 2>&1)" ||
-        fallar "No se pudo consultar el estado SMART de $device"
-    if printf '%s\n' "$status" | grep -qi 'in progress'; then
-        fallar "Ya hay una prueba SMART en curso en $device; se conserva"
-    fi
+	status="$(smartctl_cmd -c "$device" 2>&1)" ||
+		fallar "No se pudo consultar el estado SMART de $device"
+	if printf '%s\n' "$status" | grep -qi 'in progress'; then
+		fallar "Ya hay una prueba SMART en curso en $device; se conserva"
+	fi
 done
 
 echo
 echo "===== INICIANDO HDD ====="
 smartctl_cmd -t long "$HDD_DEVICE" ||
-        fallar "No se pudo iniciar la prueba larga del HDD Datos"
+	fallar "No se pudo iniciar la prueba larga del HDD Datos"
 
 echo
 echo "===== INICIANDO SSD ====="
 smartctl_cmd -t long "$SSD_DEVICE" ||
-        fallar "No se pudo iniciar la prueba larga del SSD Sistema"
+	fallar "No se pudo iniciar la prueba larga del SSD Sistema"
 
 echo
 echo "⏳ Esperando hasta $HDD_WAIT_MINUTES minutos para completar las pruebas"
@@ -76,33 +76,40 @@ sleep "${HDD_WAIT_MINUTES}m"
 echo
 echo "===== VERIFICANDO HDD ====="
 REGISTRO_HDD="$(smartctl_cmd -l selftest "$HDD_DEVICE" 2>&1)" ||
-        fallar "No se pudo leer el resultado SMART del HDD Datos"
+	fallar "No se pudo leer el resultado SMART del HDD Datos"
 
 ULTIMA_PRUEBA_HDD="$(
-        printf '%s\n' "$REGISTRO_HDD" |
-                awk '/^# *1[[:space:]]+Extended/ { print; exit }'
+	printf '%s\n' "$REGISTRO_HDD" |
+		awk '/^# *1[[:space:]]+Extended/ { print; exit }'
 )"
 
 [ -n "$ULTIMA_PRUEBA_HDD" ] ||
-        fallar "No se encontró el resultado de la prueba larga del HDD Datos"
+	fallar "No se encontró el resultado de la prueba larga del HDD Datos"
 
 case "$ULTIMA_PRUEBA_HDD" in
 *"Completed without error"*)
-        echo "✅ HDD Datos: prueba larga completada correctamente"
-        ;;
+	echo "✅ HDD Datos: prueba larga completada correctamente"
+	;;
 *)
-        fallar "HDD Datos: la prueba larga no terminó correctamente: $ULTIMA_PRUEBA_HDD"
-        ;;
+	fallar "HDD Datos: la prueba larga no terminó correctamente: $ULTIMA_PRUEBA_HDD"
+	;;
 esac
 
 echo
 echo "===== VERIFICANDO SSD ====="
-if smartctl_cmd -c "$SSD_DEVICE" 2>&1 | grep -qi 'in progress'; then
-        fallar "SSD Sistema: la prueba larga sigue en curso tras el tiempo previsto"
+ESTADO_SSD="$(smartctl_cmd -c "$SSD_DEVICE" 2>&1)" ||
+	fallar "No se pudo consultar el resultado SMART del SSD Sistema"
+
+if grep -qi 'in progress' <<<"$ESTADO_SSD"; then
+	fallar "SSD Sistema: la prueba larga sigue en curso tras el tiempo previsto"
+fi
+
+if ! grep -Eq 'Self-test execution status:[[:space:]]*\([[:space:]]*0\)' <<<"$ESTADO_SSD"; then
+	fallar "SSD Sistema: la prueba larga no terminó correctamente"
 fi
 
 if ! smartctl_cmd -H "$SSD_DEVICE" 2>&1 | grep -q 'PASSED'; then
-        fallar "SSD Sistema: SMART no informa un estado correcto tras la prueba larga"
+	fallar "SSD Sistema: SMART no informa un estado correcto tras la prueba larga"
 fi
 
 echo "✅ SSD Sistema: prueba larga terminada y SMART correcto"

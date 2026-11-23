@@ -7,4 +7,6 @@ User=root
 Nice=19
 IOSchedulingClass=idle
 TimeoutStartSec=15min
+ExecStartPre=/usr/bin/bash -c 'for disk in datos wd; do if /usr/bin/systemctl cat hd-idle-$$disk.service >/dev/null 2>&1; then /usr/bin/systemctl stop hd-idle-$$disk.service || exit 1; fi; done'
 ExecStart=/opt/fumetaos/bin/fumetaos-smart-short-test
+ExecStopPost=/usr/bin/bash -c 'result=0; for disk in datos wd; do if /usr/bin/systemctl cat hd-idle-$$disk.service >/dev/null 2>&1; then /usr/bin/systemctl start hd-idle-$$disk.service || result=1; fi; done; exit $$result'

@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 
 if [ "$#" -ne 0 ]; then
@@ -15,7 +15,7 @@ if [ "$#" -ne 0 ]; then
 	exit 20
 fi
 
-for COMMAND in bash shellcheck shfmt git find sort; do
+for COMMAND in bash python3 shellcheck shfmt git find sort; do
 	if ! command -v "$COMMAND" >/dev/null 2>&1; then
 		echo "❌ Falta la herramienta requerida: $COMMAND"
 		exit 20
@@ -29,6 +29,12 @@ mapfile -d '' CHECK_FILES < <(
 		-type f \
 		\( -name '*.sh' -o -path 'bin/*' \) \
 		-print0 |
+		while IFS= read -r -d '' candidate; do
+			IFS= read -r shebang <"$candidate" || true
+			case "$shebang" in
+			'#!/bin/bash'* | '#!/usr/bin/env bash'* | '#!/bin/sh'* | '#!/usr/bin/env sh'*) printf '%s\0' "$candidate" ;;
+			esac
+		done |
 		sort -z
 )
 
@@ -41,7 +47,22 @@ for FILE in "${CHECK_FILES[@]}"; do
 	bash -n "$FILE"
 done
 
-echo "✅ Sintaxis correcta"
+python3 -B - <<'PYTHON_SYNTAX'
+import ast
+from pathlib import Path
+
+for directory in ("bin", "core", "modules", "apps", "install"):
+    for path in Path(directory).rglob("*"):
+        if not path.is_file():
+            continue
+        content = path.read_bytes()
+        if path.suffix == ".py" or content.startswith(
+            (b"#!/usr/bin/env python3", b"#!/usr/bin/python3")
+        ):
+            ast.parse(content, filename=str(path))
+PYTHON_SYNTAX
+
+echo "✅ Sintaxis Bash y Python correcta"
 
 echo
 echo "===== SHELLCHECK ====="

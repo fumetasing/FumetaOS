@@ -54,7 +54,6 @@ echo "fumetaos history"
 echo "   Historial del sistema"
 echo
 
-
 echo "fumetaos config"
 echo "   Mostrar la ruta del archivo de configuración"
 echo

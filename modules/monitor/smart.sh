@@ -66,10 +66,10 @@ comprobar_disco() {
 	if despertar_para_informe; then
 		intentos=4
 	else
-		opciones+=(-n standby,3,5)
+		opciones+=(-n 'standby,3,5')
 	fi
 
-	for ((intento=1; intento<=intentos; intento++)); do
+	for ((intento = 1; intento <= intentos; intento++)); do
 		estado=0
 		output="$(LC_ALL=C smartctl_cmd "${opciones[@]}" -H "$disk" 2>&1)" || estado=$?
 		case "$output" in
@@ -83,7 +83,7 @@ comprobar_disco() {
 	if [ "$estado" -eq 3 ] &&
 		[[ "$output" == *"Device is in STANDBY"* || "$output" == *"Device is in SLEEP"* ]]; then
 		if [ "$WATCH" -eq 0 ]; then
-			echo "ℹ️ $name: en reposo"
+			mostrar_smart_nocturno "$disk" "$name"
 		fi
 		return
 	fi
@@ -95,11 +95,48 @@ comprobar_disco() {
 	esac
 }
 
+mostrar_smart_nocturno() {
+	local disk="$1" name="$2" resultado tipo='USB WD'
+	local filtro='pruebas SMART cortas terminadas|prueba larga completada correctamente|prueba larga terminada y SMART correcto|^🔴 '
+	local -a unidades=(-u fumetaos-smart-short-test.service)
+
+	case "$disk" in
+	"$HDD_DEVICE") tipo='HDD Datos' ;;
+	"$SSD_DEVICE") tipo='SSD Sistema' ;;
+	esac
+
+	if [ "$tipo" != 'USB WD' ]; then
+		unidades+=(-u fumetaos-smart-test.service)
+	fi
+
+	resultado="$(
+		journalctl -q "${unidades[@]}" --grep "$filtro" --reverse -o cat --no-pager |
+			awk -v disk="$disk" -v name="$tipo" '
+				$0 == "🔴 La prueba corta no terminó correctamente en " disk ||
+				$0 == "🔴 El registro no confirma la última prueba corta en " disk ||
+				$0 == "🔴 Salud SMART incorrecta en " disk ||
+				(name == "HDD Datos" && index($0, "🔴 HDD Datos: la prueba larga no terminó correctamente: ") == 1) ||
+				(name == "SSD Sistema" && ($0 == "🔴 SSD Sistema: SMART no informa un estado correcto tras la prueba larga" ||
+                    $0 == "🔴 SSD Sistema: la prueba larga no terminó correctamente")) {print "fallo"; exit}
+				/^✅ HDD, SSD y WD USB: pruebas SMART cortas terminadas sin errores/ ||
+				(name == "USB WD" && /^✅ WD USB: pruebas SMART cortas terminadas sin errores/) ||
+				(name != "USB WD" && /^✅ HDD y SSD: pruebas SMART cortas terminadas sin errores/) ||
+				$0 == "✅ " name ": prueba larga completada correctamente" ||
+				$0 == "✅ " name ": prueba larga terminada y SMART correcto" {print "correcto"; exit}
+			'
+	)"
+	case "$resultado" in
+	correcto) mostrar_correcto "$name" ;;
+	fallo) mostrar_fallo "$name" ;;
+	*)
+		echo "⚠️ $name (sin resultado SMART nocturno)"
+		elevar_error 10
+		;;
+	esac
+}
+
 mostrar_smart_wd() {
 	local wd=/dev/disk/by-id/usb-WD_Elements_25A3_3444475A3245315A-0:0
-	local correcto='WD USB: pruebas SMART cortas terminadas sin errores'
-	local fallo="(La prueba corta no terminó correctamente en|El registro no confirma la última prueba corta en|Salud SMART incorrecta en) $wd"
-	local resultado
 
 	if [ ! -b "$wd" ]; then
 		echo 'ℹ️ USB WD: desconectado'
@@ -108,15 +145,9 @@ mostrar_smart_wd() {
 
 	if despertar_para_informe; then
 		comprobar_disco "$wd" "USB WD" -d sat
-		return
+	else
+		mostrar_smart_nocturno "$wd" "USB WD"
 	fi
-
-	resultado="$(journalctl -q -u fumetaos-smart-short-test.service --grep "$correcto|$fallo" -n 1 -o cat --no-pager)" || resultado=
-	case "$resultado" in
-		*"$correcto"*) mostrar_correcto 'USB WD' ;;
-		'🔴 '*) mostrar_fallo 'USB WD' ;;
-		*) mostrar_no_disponible 'USB WD (sin resultado SMART nocturno)' ;;
-	esac
 }
 
 comprobar_disco "$SSD_DEVICE" "$(disk_name "$SSD_DEVICE")"

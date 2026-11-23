@@ -41,18 +41,22 @@ fi
 ###########################################################
 
 RESPONSE="$(
-	curl -s \
+	curl --silent --show-error --fail \
+		--connect-timeout 10 --max-time 30 \
 		-X POST \
 		"https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
 		-d chat_id="$TELEGRAM_CHAT_ID" \
 		--data-urlencode text="$MESSAGE"
-)"
+)" || {
+	echo "Error de conexión enviando Telegram" >&2
+	exit 1
+}
 
 ###########################################################
 # Validación
 ###########################################################
 
-if printf '%s\n' "$RESPONSE" | grep -q '"ok":true'; then
+if printf '%s\n' "$RESPONSE" | jq -e '.ok == true' >/dev/null 2>&1; then
 	exit 0
 fi
 

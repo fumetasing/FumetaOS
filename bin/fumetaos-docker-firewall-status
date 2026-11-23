@@ -3,7 +3,10 @@
 set -euo pipefail
 
 [ "$#" -eq 0 ] ||
-  { echo "❌ El verificador no acepta argumentos" >&2; exit 20; }
+	{
+		echo "❌ El verificador no acepta argumentos" >&2
+		exit 20
+	}
 
 SERVICIO="fumetaos-docker-firewall.service"
 CADENA="FUMETAOS-DOCKER"
@@ -15,22 +18,22 @@ systemctl is-active --quiet "$SERVICIO"
 
 iptables -w -C DOCKER-USER -j "$CADENA"
 iptables -w -C "$CADENA" \
-  -s "$LAN" \
-  -i "$INTERFAZ_LAN" \
-  -j RETURN
+	-s "$LAN" \
+	-i "$INTERFAZ_LAN" \
+	-j RETURN
 iptables -w -C "$CADENA" \
-  -i tailscale0 \
-  -j RETURN
+	-i tailscale0 \
+	-j RETURN
 iptables -w -C "$CADENA" \
-  -i "$INTERFAZ_LAN" \
-  -p tcp \
-  --dport 51413 \
-  -j RETURN
+	-i "$INTERFAZ_LAN" \
+	-p tcp \
+	--dport 51413 \
+	-j RETURN
 iptables -w -C "$CADENA" \
-  -i "$INTERFAZ_LAN" \
-  -p udp \
-  --dport 51413 \
-  -j RETURN
+	-i "$INTERFAZ_LAN" \
+	-p udp \
+	--dport 51413 \
+	-j RETURN
 iptables -w -C "$CADENA" \
-  -i "$INTERFAZ_LAN" \
-  -j DROP
+	-i "$INTERFAZ_LAN" \
+	-j DROP

@@ -5,6 +5,8 @@
 # Monitor de máquinas virtuales
 ###########################################################
 
+export LC_ALL=C
+
 ERROR=0
 TOTAL=0
 RUNNING=0
@@ -66,7 +68,9 @@ for VM in "${VMS[@]}"; do
 		;;
 	paused | pmsuspended)
 		PROBLEMS=$((PROBLEMS + 1))
-		ERROR=10
+		if [ "$ERROR" -lt 10 ]; then
+			ERROR=10
+		fi
 
 		echo "🔴 $VM"
 		echo "   Estado: $STATE"

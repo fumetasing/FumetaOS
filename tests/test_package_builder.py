@@ -114,3 +114,12 @@ class PackageBuilderTests(unittest.TestCase):
                 self.assertEqual(result.returncode, expected, result.stdout + result.stderr)
                 self.assertEqual((self.package / "bin/fumetaos").read_text(), "anterior\n")
                 self.assertEqual((self.package / "VERSION").read_text(), "2.4.40\n")
+
+    def test_build_resolves_the_project_when_bin_is_a_symlink(self):
+        active = self.root / 'active'
+        active.mkdir()
+        (active / 'bin').symlink_to(self.source / 'bin', target_is_directory=True)
+        self.builder = active / 'bin/fumetaos-build'
+        result = self.build()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((self.package / 'VERSION').read_text(), '2.4.41\n')

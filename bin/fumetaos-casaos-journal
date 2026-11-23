@@ -3,9 +3,12 @@
 set -euo pipefail
 
 [ "$#" -eq 0 ] ||
-  { echo "❌ Este lector no acepta argumentos"; exit 20; }
+	{
+		echo "❌ Este lector no acepta argumentos"
+		exit 20
+	}
 
 exec /usr/bin/journalctl \
-  -u casaos.service \
-  --since "24 hours ago" \
-  --no-pager
+	-u casaos.service \
+	--since "24 hours ago" \
+	--no-pager

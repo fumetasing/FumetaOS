@@ -1,5 +1,17 @@
 # FumetaOS Changelog
 
+## v2.4.60
+
+- Coordina las pruebas SMART con el reposo independiente de cada disco. La larga suspende el del HDD Datos y la corta los de los discos que comprueba. Al finalizar se reactivan siempre los controles disponibles, incluso tras un fallo, cancelación o tiempo máximo.
+- Comprueba el resultado de la prueba larga del SSD y comunica los errores de consulta. Los informes manuales muestran el último resultado nocturno de los discos dormidos.
+- Corrige estados engañosos del firewall UFW, los volúmenes desmontados, las máquinas virtuales y las aplicaciones con healthcheck fallido.
+- Comunica los fallos al consultar o retirar torrents y al restaurar CasaOS, contenedores y máquinas virtuales después de la copia de recuperación.
+- Limita las esperas de Telegram, las consultas HTTP de aplicaciones y el acceso a Time Capsule. Mejora la lectura de historiales de copias extensos y la sustitución de direcciones de aplicaciones.
+- Agrupa las consultas de versiones Docker y ejecuta las comprobaciones de actualizaciones independientes en paralelo, conservando el orden de salida y los códigos de error.
+- Ajusta el temporizador distribuido a las 07:15 y 21:45 en Europe/Madrid.
+- Normaliza el formato, corrige las reglas de EditorConfig y amplía el control de calidad a la sintaxis Python. El constructor y el control de calidad resuelven el proyecto al ejecutarse mediante directorios enlazados.
+- Añade pruebas de regresión. La batería alcanza 79 pruebas de Python y 24 escenarios simulados de Bash.
+
 ## v2.4.59
 
 - El informe usa naranja para los avisos que antes se mostraban en amarillo.

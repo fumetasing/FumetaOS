@@ -20,6 +20,12 @@ check_disk() {
 	local mount="$2"
 	local free use color
 
+	if [ "$mount" != / ] && ! mountpoint -q -- "$mount"; then
+		echo "🔴 $name: el volumen no está montado en $mount"
+		ERROR=20
+		return
+	fi
+
 	if ! read -r free use < <(
 		df -P -h -- "$mount" | awk 'NR == 2 { sub(/%$/, "", $5); print $4, $5 }'
 	) || [[ ! "$use" =~ ^[0-9]+$ ]]; then

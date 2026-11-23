@@ -3,8 +3,8 @@ Description=Enviar informes diarios de FumetaOS
 
 
 [Timer]
-OnCalendar=*-*-* 07:50:00
-OnCalendar=*-*-* 21:30:00
+OnCalendar=*-*-* 07:15:00 Europe/Madrid
+OnCalendar=*-*-* 21:45:00 Europe/Madrid
 Persistent=true
 
 

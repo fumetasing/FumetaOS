@@ -33,30 +33,44 @@ restic_cmd() {
 }
 
 restaurar_servicios() {
+	local estado=0
 	[ "$SERVICES_STOPPED" -eq 1 ] || return 0
 
-	if [ "$CASAOS_WAS_ACTIVE" -eq 1 ]; then
-		systemctl start casaos 2>/dev/null || true
+	if [ "$CASAOS_WAS_ACTIVE" -eq 1 ] && ! systemctl start casaos; then
+		echo "🔴 No se pudo restaurar CasaOS" >&2
+		estado=20
 	fi
 
-	if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ]; then
-		docker start "${RUNNING_CONTAINERS[@]}" >/dev/null 2>&1 || true
+	if [ "${#RUNNING_CONTAINERS[@]}" -gt 0 ] &&
+		! docker start "${RUNNING_CONTAINERS[@]}"; then
+		echo "🔴 No se pudieron restaurar todas las aplicaciones" >&2
+		estado=20
 	fi
 
-	SERVICES_STOPPED=0
+	if [ "$estado" -eq 0 ]; then
+		SERVICES_STOPPED=0
+	fi
+	return "$estado"
 }
 
 restaurar_maquinas_virtuales() {
+	local estado=0 vm_estado
 	[ "$VMS_STOPPED" -eq 1 ] || return 0
 
 	for VM in "${RUNNING_VMS[@]}"; do
+		vm_estado=$(LC_ALL=C virsh -c qemu:///system domstate "$VM" 2>/dev/null) || vm_estado=
+		[ "$vm_estado" != running ] || continue
 		echo "▶️ Iniciando máquina virtual: $VM"
-
-		virsh -c qemu:///system start "$VM" >/dev/null 2>&1 ||
-			echo "⚠️ No se pudo iniciar la máquina virtual: $VM"
+		if ! virsh -c qemu:///system start "$VM"; then
+			echo "🔴 No se pudo iniciar la máquina virtual: $VM" >&2
+			estado=20
+		fi
 	done
 
-	VMS_STOPPED=0
+	if [ "$estado" -eq 0 ]; then
+		VMS_STOPPED=0
+	fi
+	return "$estado"
 }
 
 limpiar_archivos_vm() {
@@ -69,9 +83,11 @@ limpiar_archivos_vm() {
 }
 
 limpiar() {
-	restaurar_servicios
-	restaurar_maquinas_virtuales
-	limpiar_archivos_vm
+	local estado=0
+	restaurar_servicios || estado=20
+	restaurar_maquinas_virtuales || estado=20
+	limpiar_archivos_vm || estado=20
+	return "$estado"
 }
 
 interrumpir() {

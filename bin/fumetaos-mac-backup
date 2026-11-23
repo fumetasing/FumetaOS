@@ -12,8 +12,6 @@ MAC_RECOVERY_RELATIVE="backups/fumetaos/recovery-repo"
 MAC_RECOVERY_SOURCE="${SOURCE_DIR%/}/$MAC_RECOVERY_RELATIVE"
 MAC_RECOVERY_DESTINATION="$MAC_DESTINATION/$MAC_RECOVERY_RELATIVE"
 # FUMETAOS_DAILY_DELETE_50_PS4_V1
-MAX_RETRIES=3
-RETRY_DELAY=60
 
 LOCK_FILE="/run/lock/fumetaos-mac-backup.lock"
 TELEGRAM_NOTIFY="/opt/fumetaos/bin/telegram-notify"
@@ -151,11 +149,11 @@ ejecutar_rsync_con_reintentos() {
 	mac_mirror_preparar_recovery || mostrar_error "Repositorio cifrado no válido; no se copia ni borra nada"
 	CURRENT_STEP="Contar borrados sujetos al cupo diario"
 	deletes="$(mac_mirror_contar_borrados "$SOURCE_DIR" "$MAC_DESTINATION/" "${otros[@]}")" || return "$?"
-	case "$deletes" in ''|*[!0-9]*) mostrar_error "No se pudo contar los borrados" ;; esac
+	case "$deletes" in '' | *[!0-9]*) mostrar_error "No se pudo contar los borrados" ;; esac
 	mode=reserve
 	[ "${#DRY_RUN[@]}" -eq 0 ] || mode=inspect
 	quota="$(fumetaos_cupo_diario "$deletes" "$mode")" || return "$?"
-	case "$quota" in ''|*[!0-9]*) mostrar_error "Cupo no válido" ;; esac
+	case "$quota" in '' | *[!0-9]*) mostrar_error "Cupo no válido" ;; esac
 	echo "🛡️ Cupo disponible para esta transferencia: $quota. Máximo diario: 50; PS4 & PS5 y repositorio cifrado exentos."
 	# Una sola transferencia por grupo, nunca reintentar borrados automáticamente.
 	CURRENT_STEP="Copia de PS4 & PS5 sin límite de borrados"
@@ -211,7 +209,7 @@ flock -n 9 ||
 # Evitar cambios de Restic mientras se copia el repositorio a Data WD.
 exec 7>/run/lock/fumetaos-recovery-backup.lock
 flock -n 7 ||
-    mostrar_error "La copia o verificación cifrada está en curso; no se inicia el espejo"
+	mostrar_error "La copia o verificación cifrada está en curso; no se inicia el espejo"
 
 mac_mirror_configurar_rsync
 
@@ -227,7 +225,7 @@ CURRENT_STEP="Preparación del destino Data WD"
 mac_mirror_usb_disponible || mostrar_error "Data WD no está disponible"
 if [ "${#DRY_RUN[@]}" -eq 0 ]; then mkdir -p -- "$MAC_ROOT"; fi
 for dir in "$MAC_ROOT" "$MAC_ROOT/PS4 & PS5"; do
-    [ ! -L "$dir" ] || mostrar_error "Enlace en destino: $dir"
+	[ ! -L "$dir" ] || mostrar_error "Enlace en destino: $dir"
 done
 
 if [ "${#DRY_RUN[@]}" -eq 0 ] &&

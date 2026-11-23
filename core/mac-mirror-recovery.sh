@@ -2,7 +2,7 @@
 
 # Grupo independiente del espejo: solo el repositorio cifrado de recuperación.
 mac_mirror_validar_recovery() {
-    python3 - "$MAC_RECOVERY_SOURCE" <<'PY' || return 20
+	python3 - "$MAC_RECOVERY_SOURCE" <<'PY' || return 20
 from pathlib import Path
 import sys
 p = Path(sys.argv[1])
@@ -18,14 +18,14 @@ if config.is_symlink() or not config.is_file() or config.stat().st_size == 0:
 if not any(q.is_file() and not q.is_symlink() for q in (p / 'snapshots').iterdir()):
     raise SystemExit('El repositorio no contiene instantáneas; no se permiten borrados')
 PY
-    # Verifica que Restic puede descifrar su configuración con la clave instalada.
-    restic --repo "$MAC_RECOVERY_SOURCE" \
-        --password-file /etc/fumetaos/restic-password \
-        --cache-dir /var/cache/fumetaos-restic cat config >/dev/null
+	# Verifica que Restic puede descifrar su configuración con la clave instalada.
+	restic --repo "$MAC_RECOVERY_SOURCE" \
+		--password-file /etc/fumetaos/restic-password \
+		--cache-dir /var/cache/fumetaos-restic cat config >/dev/null
 }
 
 mac_mirror_recovery_remote_script() {
-    cat <<'REMOTE'
+	cat <<'REMOTE'
 set -eu
 for ruta in "$DESTINATION/backups" "$DESTINATION/backups/fumetaos" "$RECOVERY_DESTINATION"; do
     if [ -L "$ruta" ]; then
@@ -53,23 +53,27 @@ REMOTE
 }
 
 mac_mirror_preparar_recovery() {
-    local config_hash remote_script
-    CURRENT_STEP="Validación del repositorio cifrado de recuperación"
-    mac_mirror_validar_recovery || return 20
-    config_hash=$(sha256sum "$MAC_RECOVERY_SOURCE/config" | awk '{print $1}') || return 20
-    remote_script=$(
-        printf 'DESTINATION=%q\n' "$MAC_DESTINATION"
-        printf 'RECOVERY_DESTINATION=%q\n' "$MAC_RECOVERY_DESTINATION"
-        printf 'EXPECTED_CONFIG_HASH=%q\n' "$config_hash"
-        mac_mirror_recovery_remote_script
-    )
-    mac_mirror_usb_disponible || return 20
-    /bin/bash -s <<<"$remote_script" || return 20
+	local config_hash remote_script
+	# La consume el manejador de errores de fumetaos-mac-backup.
+	# shellcheck disable=SC2034
+	CURRENT_STEP="Validación del repositorio cifrado de recuperación"
+	mac_mirror_validar_recovery || return 20
+	config_hash=$(sha256sum "$MAC_RECOVERY_SOURCE/config" | awk '{print $1}') || return 20
+	remote_script=$(
+		printf 'DESTINATION=%q\n' "$MAC_DESTINATION"
+		printf 'RECOVERY_DESTINATION=%q\n' "$MAC_RECOVERY_DESTINATION"
+		printf 'EXPECTED_CONFIG_HASH=%q\n' "$config_hash"
+		mac_mirror_recovery_remote_script
+	)
+	mac_mirror_usb_disponible || return 20
+	/bin/bash -s <<<"$remote_script" || return 20
 }
 
 mac_mirror_copiar_recovery() {
-    CURRENT_STEP="Copia del repositorio cifrado de recuperación sin límite de borrados"
-    mac_mirror_usb_disponible || return 20
-    mac_mirror_copiar "$MAC_RECOVERY_SOURCE/" \
-        "$MAC_RECOVERY_DESTINATION/" --mkpath
+	# La consume el manejador de errores de fumetaos-mac-backup.
+	# shellcheck disable=SC2034
+	CURRENT_STEP="Copia del repositorio cifrado de recuperación sin límite de borrados"
+	mac_mirror_usb_disponible || return 20
+	mac_mirror_copiar "$MAC_RECOVERY_SOURCE/" \
+		"$MAC_RECOVERY_DESTINATION/" --mkpath
 }

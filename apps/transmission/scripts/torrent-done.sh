@@ -34,11 +34,11 @@ fi
 RAR_FILE=""
 
 # Multipartes: empezar por part01
-RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.part01.rar" | head -1)
+RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.part01.rar" -print -quit)
 
 # RAR único o nomenclatura alternativa
 if [ -z "$RAR_FILE" ]; then
-	RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.rar" | head -1)
+	RAR_FILE=$(find "$DOWNLOAD_PATH" -type f -iname "*.rar" -print -quit)
 fi
 
 ###########################################################
@@ -78,6 +78,6 @@ fi
 /usr/bin/transmission-remote \
 	--auth "${USER}:${PASS}" \
 	--torrent "$TORRENT_ID" \
-	--remove
+	--remove || exit 20
 
 exit 0

@@ -26,7 +26,7 @@ if ! referencia_local="$(docker inspect --format '{{.Config.Image}}' "$CONTENEDO
 fi
 
 case "$referencia_local" in
-linuxserver/filezilla:*|linuxserver/filezilla@sha256:*|lscr.io/linuxserver/filezilla:*|lscr.io/linuxserver/filezilla@sha256:*) ;;
+linuxserver/filezilla:* | linuxserver/filezilla@sha256:* | lscr.io/linuxserver/filezilla:* | lscr.io/linuxserver/filezilla@sha256:*) ;;
 *) aviso "imagen distinta de LinuxServer; requiere revisión" ;;
 esac
 
@@ -73,7 +73,7 @@ if [ "$digest_local" != "$digest_remoto" ]; then
 			"https://registry-1.docker.io/v2/${REPOSITORIO}/manifests/${digest_remoto}" 2>/dev/null |
 			jq -r '.manifests[]? | select(.platform.os == "linux") | .digest'
 	)" || aviso "no se pudieron consultar las variantes de la imagen remota"
-	if grep -Fxq "$digest_local" <<< "$digests_plataforma"; then
+	if grep -Fxq "$digest_local" <<<"$digests_plataforma"; then
 		digest_remoto="$digest_local"
 	fi
 fi

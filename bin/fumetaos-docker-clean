@@ -9,8 +9,8 @@
 set -euo pipefail
 
 if ! docker info >/dev/null 2>&1; then
-  echo "❌ Docker no está disponible"
-  exit 20
+	echo "❌ Docker no está disponible"
+	exit 20
 fi
 
 echo "🐳 Limpieza diaria segura de Docker"
@@ -25,54 +25,54 @@ docker builder prune --all --force
 echo
 echo "===== IMÁGENES ANTIGUAS SIN CONTENEDORES ====="
 LIMITE="$(
-  date -d '7 days ago' +%s
+	date -d '7 days ago' +%s
 )"
 
 mapfile -t IMAGENES_USADAS < <(
-  docker ps -aq |
-    xargs -r docker inspect \
-      --format '{{.Image}}' |
-    sort -u
+	docker ps -aq |
+		xargs -r docker inspect \
+			--format '{{.Image}}' |
+		sort -u
 )
 
 mapfile -t IMAGENES_EXISTENTES < <(
-  docker image ls \
-    --quiet \
-    --no-trunc |
-    sort -u
+	docker image ls \
+		--quiet \
+		--no-trunc |
+		sort -u
 )
 
 ELIMINADAS=0
 
 for IMAGEN in "${IMAGENES_EXISTENTES[@]}"; do
-  PROTEGIDA=false
+	PROTEGIDA=false
 
-  for USADA in "${IMAGENES_USADAS[@]}"; do
-    if [ "$IMAGEN" = "$USADA" ]; then
-      PROTEGIDA=true
-      break
-    fi
-  done
+	for USADA in "${IMAGENES_USADAS[@]}"; do
+		if [ "$IMAGEN" = "$USADA" ]; then
+			PROTEGIDA=true
+			break
+		fi
+	done
 
-  if [ "$PROTEGIDA" = true ]; then
-    continue
-  fi
+	if [ "$PROTEGIDA" = true ]; then
+		continue
+	fi
 
-  CREADA="$(
-    docker image inspect \
-      --format '{{.Created}}' \
-      "$IMAGEN"
-  )"
+	CREADA="$(
+		docker image inspect \
+			--format '{{.Created}}' \
+			"$IMAGEN"
+	)"
 
-  CREADA_EPOCH="$(
-    date -d "$CREADA" +%s
-  )"
+	CREADA_EPOCH="$(
+		date -d "$CREADA" +%s
+	)"
 
-  if [ "$CREADA_EPOCH" -le "$LIMITE" ]; then
-    echo "🗑️ Eliminando imagen sin uso: $IMAGEN"
-    docker image rm --force "$IMAGEN"
-    ELIMINADAS=$((ELIMINADAS + 1))
-  fi
+	if [ "$CREADA_EPOCH" -le "$LIMITE" ]; then
+		echo "🗑️ Eliminando imagen sin uso: $IMAGEN"
+		docker image rm --force "$IMAGEN"
+		ELIMINADAS=$((ELIMINADAS + 1))
+	fi
 done
 
 echo "Imágenes antiguas sin uso eliminadas: $ELIMINADAS"

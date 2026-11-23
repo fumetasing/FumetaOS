@@ -9,18 +9,18 @@ source "$(dirname "${BASH_SOURCE[0]}")/common.sh"
 
 # FumetaOS: SSH socket-aware health check v1
 unit_is_active() {
-  case "$1" in
-    ssh|ssh.service|sshd|sshd.service)
-      local estado
-      estado="$(systemctl show ssh.service -p ActiveState --value 2>/dev/null)" || return 1
-      case "$estado" in
-        active) return 0 ;;
-        inactive) systemctl is-active --quiet ssh.socket ;;
-        *) return 1 ;;
-      esac
-      ;;
-    *) systemctl is-active --quiet "$1" ;;
-  esac
+	case "$1" in
+	ssh | ssh.service | sshd | sshd.service)
+		local estado
+		estado="$(systemctl show ssh.service -p ActiveState --value 2>/dev/null)" || return 1
+		case "$estado" in
+		active) return 0 ;;
+		inactive) systemctl is-active --quiet ssh.socket ;;
+		*) return 1 ;;
+		esac
+		;;
+	*) systemctl is-active --quiet "$1" ;;
+	esac
 }
 
 ###########################################################

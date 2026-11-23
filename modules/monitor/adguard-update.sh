@@ -26,7 +26,7 @@ if ! referencia_local="$(docker inspect --format '{{.Config.Image}}' "$CONTENEDO
 fi
 
 case "$referencia_local" in
-adguard/adguardhome:*|adguard/adguardhome@sha256:*|docker.io/adguard/adguardhome:*|docker.io/adguard/adguardhome@sha256:*) ;;
+adguard/adguardhome:* | adguard/adguardhome@sha256:* | docker.io/adguard/adguardhome:* | docker.io/adguard/adguardhome@sha256:*) ;;
 *) aviso "imagen distinta de AdGuard; requiere revisión" ;;
 esac
 
@@ -45,7 +45,7 @@ esac
 [[ "$digest_local" =~ ^sha256:[0-9a-f]{64}$ ]] || aviso "no se pudo identificar la imagen instalada"
 
 version_local="$(docker image inspect --format '{{index .Config.Labels "org.opencontainers.image.version"}}' "$imagen_id" 2>/dev/null)" || aviso "no se pudo consultar la versión instalada"
-case "$version_local" in ""|"<no value>") version_local="imagen instalada" ;; esac
+case "$version_local" in "" | "<no value>") version_local="imagen instalada" ;; esac
 
 token="$(
 	curl --silent --show-error --fail --connect-timeout 5 --max-time 15 \

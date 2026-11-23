@@ -135,7 +135,7 @@ app_report_url() {
 
 	elif [ -n "$APP_WEBUI" ]; then
 
-		echo "${APP_WEBUI//[IP]/localhost}"
+		echo "${APP_WEBUI//\[IP\]/localhost}"
 
 	fi
 
@@ -182,7 +182,7 @@ app_health() {
 
 	if [ "$APP_HEALTH" = "transmission" ]; then
 
-		RESPONSE=$(curl -si \
+		RESPONSE=$(curl --connect-timeout 5 --max-time 10 -si \
 			http://localhost:9091/transmission/rpc/ 2>/dev/null)
 
 		STATUS=$(echo "$RESPONSE" | head -1)
@@ -207,7 +207,7 @@ app_health() {
 
 	if [ -n "$APP_HEALTH" ]; then
 
-		if curl -fs "$APP_HEALTH" >/dev/null 2>&1; then
+		if curl --connect-timeout 5 --max-time 10 -fs "$APP_HEALTH" >/dev/null 2>&1; then
 
 			echo "healthy"
 

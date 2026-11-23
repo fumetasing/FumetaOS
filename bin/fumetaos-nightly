@@ -9,159 +9,159 @@ LOCK_FILE=/run/lock/fumetaos-nightly.lock
 declare -a FAILED=()
 
 print_plan() {
-    printf '%s\n' \
-        '00:30 → copia local' \
-        'después → Time Capsule a Data WD' \
-        'después → copia de recuperación' \
-        'después → espejo general a Data WD' \
-        'después → actualización de Ubuntu' \
-        'después → limpieza segura de Docker' \
-        'los lunes, después → verificación cifrada' \
-        'al final → SMART corto de martes a domingo; largo los lunes'
+	printf '%s\n' \
+		'00:30 → copia local' \
+		'después → Time Capsule a Data WD' \
+		'después → copia de recuperación' \
+		'después → espejo general a Data WD' \
+		'después → actualización de Ubuntu' \
+		'después → limpieza segura de Docker' \
+		'los lunes, después → verificación cifrada' \
+		'al final → SMART corto de martes a domingo; largo los lunes'
 }
 
 write_status() {
-    local result="$1"
-    local end_time="$2"
-    local temporary failed_list='' item
+	local result="$1"
+	local end_time="$2"
+	local temporary failed_list='' item
 
-    for item in "${FAILED[@]}"; do
-        if [ -n "$failed_list" ]; then
-            failed_list+=', '
-        fi
-        failed_list+="$item"
-    done
+	for item in "${FAILED[@]}"; do
+		if [ -n "$failed_list" ]; then
+			failed_list+=', '
+		fi
+		failed_list+="$item"
+	done
 
-    temporary=$(mktemp "$(dirname "$STATUS_FILE")/.fumetaos-nightly-status.XXXXXX") || return 1
-    if ! printf 'version=1\nstart=%s\nend=%s\nresult=%s\nstep=%s\nfailed=%s\n' \
-        "$START_TIME" "$end_time" "$result" "$CURRENT_STEP" "$failed_list" >"$temporary" ||
-        ! chmod 644 "$temporary" || ! mv -f "$temporary" "$STATUS_FILE"; then
-        rm -f -- "$temporary"
-        return 1
-    fi
+	temporary=$(mktemp "$(dirname "$STATUS_FILE")/.fumetaos-nightly-status.XXXXXX") || return 1
+	if ! printf 'version=1\nstart=%s\nend=%s\nresult=%s\nstep=%s\nfailed=%s\n' \
+		"$START_TIME" "$end_time" "$result" "$CURRENT_STEP" "$failed_list" >"$temporary" ||
+		! chmod 644 "$temporary" || ! mv -f "$temporary" "$STATUS_FILE"; then
+		rm -f -- "$temporary"
+		return 1
+	fi
 }
 
 on_exit() {
-    local exit_status=$?
-    trap - EXIT
-    if [ "$STATUS_FINALIZED" -eq 0 ]; then
-        write_status failed "$(date +%s)" ||
-            echo '🔴 No se pudo guardar el estado de la cadena nocturna' >&2
-    fi
-    exit "$exit_status"
+	local exit_status=$?
+	trap - EXIT
+	if [ "$STATUS_FINALIZED" -eq 0 ]; then
+		write_status failed "$(date +%s)" ||
+			echo '🔴 No se pudo guardar el estado de la cadena nocturna' >&2
+	fi
+	exit "$exit_status"
 }
 
 run_step() {
-    local label="$1"
-    local unit="$2"
+	local label="$1"
+	local unit="$2"
 
-    CURRENT_STEP="$label"
-    write_status running 0 || STATUS_WRITE_FAILED=1
+	CURRENT_STEP="$label"
+	write_status running 0 || STATUS_WRITE_FAILED=1
 
-    echo
-    echo "▶️ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
+	echo
+	echo "▶️ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
 
-    # Para Type=oneshot, systemctl start espera hasta su finalización.
-    if systemctl start "$unit"; then
-        echo "✅ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
-        return 0
-    fi
+	# Para Type=oneshot, systemctl start espera hasta su finalización.
+	if systemctl start "$unit"; then
+		echo "✅ $label — $(date '+%d/%m/%Y %H:%M:%S %Z')"
+		return 0
+	fi
 
-    echo "🔴 $label ha fallado — $(date '+%d/%m/%Y %H:%M:%S %Z')" >&2
-    FAILED+=("$label")
-    return 1
+	echo "🔴 $label ha fallado — $(date '+%d/%m/%Y %H:%M:%S %Z')" >&2
+	FAILED+=("$label")
+	return 1
 }
 
 verify_due() {
-    local last_success
-    [ "$START_DAY" -eq 1 ] && return 0
-    [ -f "$VERIFY_STAMP" ] || return 1
-    last_success=$(stat -c %Y "$VERIFY_STAMP") || return 1
-    [ $(( $(date +%s) - last_success )) -ge $((7 * 24 * 3600)) ]
+	local last_success
+	[ "$START_DAY" -eq 1 ] && return 0
+	[ -f "$VERIFY_STAMP" ] || return 1
+	last_success=$(stat -c %Y "$VERIFY_STAMP") || return 1
+	[ $(($(date +%s) - last_success)) -ge $((7 * 24 * 3600)) ]
 }
 
 nightly_run() {
-exec 9>"$LOCK_FILE"
-if ! flock -n 9; then
-    echo '❌ Ya hay una cadena nocturna en curso' >&2
-    return 20
-fi
+	exec 9>"$LOCK_FILE"
+	if ! flock -n 9; then
+		echo '❌ Ya hay una cadena nocturna en curso' >&2
+		return 20
+	fi
 
-START_TIME=$(date +%s)
-CURRENT_STEP='Preparación'
-STATUS_FINALIZED=0
-STATUS_WRITE_FAILED=0
-FAILED=()
-trap on_exit EXIT
-trap 'exit 130' INT
-trap 'exit 143' TERM
-write_status running 0 || STATUS_WRITE_FAILED=1
+	START_TIME=$(date +%s)
+	CURRENT_STEP='Preparación'
+	STATUS_FINALIZED=0
+	STATUS_WRITE_FAILED=0
+	FAILED=()
+	trap on_exit EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+	write_status running 0 || STATUS_WRITE_FAILED=1
 
-echo '🌙 Cadena nocturna FumetaOS'
-echo "Inicio: $(date '+%d/%m/%Y %H:%M:%S %Z')"
+	echo '🌙 Cadena nocturna FumetaOS'
+	echo "Inicio: $(date '+%d/%m/%Y %H:%M:%S %Z')"
 
-run_step 'Copia local' fumetaos-backup.service
-run_step 'Time Capsule → Data WD' fumetaos-timecapsule-mac-backup.service
-run_step 'Copia de recuperación' fumetaos-recovery-backup.service
-run_step 'Espejo general → Data WD' fumetaos-mac-backup.service
-run_step 'Actualización de Ubuntu' fumetaos-system-upgrade.service
-run_step 'Limpieza segura de Docker' fumetaos-docker-clean.service
+	run_step 'Copia local' fumetaos-backup.service
+	run_step 'Time Capsule → Data WD' fumetaos-timecapsule-mac-backup.service
+	run_step 'Copia de recuperación' fumetaos-recovery-backup.service
+	run_step 'Espejo general → Data WD' fumetaos-mac-backup.service
+	run_step 'Actualización de Ubuntu' fumetaos-system-upgrade.service
+	run_step 'Limpieza segura de Docker' fumetaos-docker-clean.service
 
-if verify_due; then
-    if run_step 'Verificación cifrada semanal' fumetaos-recovery-verify.service; then
-        if ! install -d -m 755 "$(dirname "$VERIFY_STAMP")" || ! touch "$VERIFY_STAMP"; then
-            echo '🔴 No se pudo registrar la verificación correcta' >&2
-            FAILED+=('Registro de verificación')
-        fi
-    fi
-else
-    echo
-    echo 'ℹ️ Verificación cifrada: lunes, o tras un lunes perdido por apagado'
-fi
+	if verify_due; then
+		if run_step 'Verificación cifrada semanal' fumetaos-recovery-verify.service; then
+			if ! install -d -m 755 "$(dirname "$VERIFY_STAMP")" || ! touch "$VERIFY_STAMP"; then
+				echo '🔴 No se pudo registrar la verificación correcta' >&2
+				FAILED+=('Registro de verificación')
+			fi
+		fi
+	else
+		echo
+		echo 'ℹ️ Verificación cifrada: lunes, o tras un lunes perdido por apagado'
+	fi
 
-# Una prueba larga sustituye a la corta de esa noche.
-if [ "$START_DAY" -eq 1 ]; then
-    run_step 'Prueba SMART larga semanal' fumetaos-smart-test.service
-else
-    run_step 'Prueba SMART corta diaria' fumetaos-smart-short-test.service
-fi
+	# Una prueba larga sustituye a la corta de esa noche.
+	if [ "$START_DAY" -eq 1 ]; then
+		run_step 'Prueba SMART larga semanal' fumetaos-smart-test.service
+	else
+		run_step 'Prueba SMART corta diaria' fumetaos-smart-short-test.service
+	fi
 
-echo
-CURRENT_STEP='Finalizada'
-if [ "$STATUS_WRITE_FAILED" -ne 0 ]; then
-    FAILED+=('Registro de estado')
-fi
-if [ "${#FAILED[@]}" -gt 0 ]; then
-    echo "🔴 Cadena terminada con errores: ${FAILED[*]}" >&2
-    if write_status failed "$(date +%s)"; then
-        STATUS_FINALIZED=1
-    fi
-    exit 20
-fi
+	echo
+	CURRENT_STEP='Finalizada'
+	if [ "$STATUS_WRITE_FAILED" -ne 0 ]; then
+		FAILED+=('Registro de estado')
+	fi
+	if [ "${#FAILED[@]}" -gt 0 ]; then
+		echo "🔴 Cadena terminada con errores: ${FAILED[*]}" >&2
+		if write_status failed "$(date +%s)"; then
+			STATUS_FINALIZED=1
+		fi
+		exit 20
+	fi
 
-if ! write_status success "$(date +%s)"; then
-    echo '🔴 No se pudo guardar el resultado de la cadena nocturna' >&2
-    exit 20
-fi
-STATUS_FINALIZED=1
-echo '✅ Cadena nocturna completada'
+	if ! write_status success "$(date +%s)"; then
+		echo '🔴 No se pudo guardar el resultado de la cadena nocturna' >&2
+		exit 20
+	fi
+	STATUS_FINALIZED=1
+	echo '✅ Cadena nocturna completada'
 }
 
 nightly_main() {
-    if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
-        print_plan
-        return 0
-    fi
+	if [ "${1:-}" = "--plan" ] && [ "$#" -eq 1 ]; then
+		print_plan
+		return 0
+	fi
 
-    if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
-        echo '❌ Uso: ejecutar sin argumentos como root (o --plan)' >&2
-        return 20
-    fi
+	if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
+		echo '❌ Uso: ejecutar sin argumentos como root (o --plan)' >&2
+		return 20
+	fi
 
-    START_DAY=$(date +%u)
-    nightly_run
+	START_DAY=$(date +%u)
+	nightly_run
 }
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
-    nightly_main "$@"
+	nightly_main "$@"
 fi

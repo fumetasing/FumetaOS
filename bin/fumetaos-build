@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-SOURCE="$(cd "$(dirname "$0")/.." && pwd)"
+SOURCE="$(cd -P "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P)"
 PACKAGE="/opt/fumetaos/install/package"
 PARENT="${PACKAGE%/*}"
 DIRECTORIOS=(bin core modules apps config services sudoers)
@@ -36,7 +36,7 @@ temporal=$(sudo mktemp -d "$PARENT/.package-build.XXXXXXXX")
 trap 'sudo rm -rf --one-file-system -- "$temporal"' EXIT
 candidato="$temporal/package"
 
-if [[ -L "$PACKAGE" || ( -e "$PACKAGE" && ! -d "$PACKAGE" ) ]]; then
+if [[ -L "$PACKAGE" || (-e "$PACKAGE" && ! -d "$PACKAGE") ]]; then
 	echo "❌ El destino del paquete no es un directorio normal." >&2
 	exit 20
 fi

@@ -284,7 +284,7 @@ instalar() {
 
 if [[ "${BASH_SOURCE[0]}" == "$0" ]]; then
 	case "${1:-}" in
-	--check|--dry-run|--install)
+	--check | --dry-run | --install)
 		if [[ "$1" == --install ]]; then
 			exec 9<"$BASE/install"
 			flock -n 9 || {

@@ -12,3 +12,9 @@ Las pruebas SMART se inician al terminar las copias, la actualización de Ubuntu
 La prueba larga existente mantiene su espera de 340 minutos y su límite de siete horas. La corta tiene un límite de quince minutos. La cadena nocturna ejecuta ambos servicios.
 
 El lunes, la prueba larga va después de la verificación cifrada semanal.
+
+## Coordinación con el reposo
+
+En este servidor, `hd-idle-datos.service` y `hd-idle-wd.service` controlan cada disco por separado a tres minutos. La prueba larga suspende el control del HDD Datos. La corta suspende el de los discos que comprueba. Cada servicio reactiva siempre los controles de reposo de los discos implicados al salir, incluido un fallo, una cancelación o el tiempo máximo de ejecución. El SSD carece de temporizador de giro.
+
+Si esas unidades locales de reposo no existen, los servicios SMART continúan sin intentar crearlas. La gestión temporal del reposo se aplica al ejecutar las pruebas mediante sus servicios de systemd.

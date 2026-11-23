@@ -63,6 +63,52 @@ ejecutar_seccion() {
 	done
 }
 
+ejecutar_actualizaciones() (
+	local temporal script pid estado resultado=0 indice
+	local -a pids=()
+	local -a scripts=(
+		/opt/fumetaos/modules/monitor/updates.sh
+		/opt/fumetaos/modules/monitor/jellyfin-update.sh
+		/opt/fumetaos/modules/monitor/transmission-update.sh
+		/opt/fumetaos/modules/monitor/filezilla-update.sh
+		/opt/fumetaos/modules/monitor/adguard-update.sh
+		/opt/fumetaos/modules/monitor/casaos-update.sh
+	)
+
+	temporal=$(mktemp -d) || {
+		echo "🔴 No se pudo preparar la consulta de actualizaciones" >&2
+		exit 20
+	}
+	limpiar_actualizaciones() {
+		for pid in "${pids[@]}"; do
+			[ -n "$pid" ] || continue
+			kill "$pid" 2>/dev/null || true
+			wait "$pid" 2>/dev/null || true
+		done
+		rm -rf -- "$temporal"
+	}
+	trap limpiar_actualizaciones EXIT
+	trap 'exit 130' INT
+	trap 'exit 143' TERM
+
+	for indice in "${!scripts[@]}"; do
+		script=${scripts[$indice]}
+		"$script" >"$temporal/$indice.out" 2>"$temporal/$indice.err" &
+		pids+=("$!")
+	done
+	for indice in "${!pids[@]}"; do
+		estado=0
+		wait "${pids[$indice]}" || estado=$?
+		pids[$indice]=
+		cat "$temporal/$indice.out"
+		cat "$temporal/$indice.err" >&2
+		if [ "$estado" -gt "$resultado" ]; then
+			resultado=$estado
+		fi
+	done
+	exit "$resultado"
+)
+
 comprobar_silenciosamente() {
 	local script
 	local status
@@ -143,7 +189,6 @@ ejecutar_seccion \
 	"⏱️ Timers FumetaOS" \
 	/opt/fumetaos/modules/monitor/timers.sh
 
-
 ejecutar_seccion \
 	"💾 Copias de seguridad" \
 	/opt/fumetaos/modules/monitor/backups.sh
@@ -189,17 +234,7 @@ fi
 
 echo "📦 Actualizaciones"
 
-/opt/fumetaos/modules/monitor/updates.sh
-registrar_resultado "$?"
-/opt/fumetaos/modules/monitor/jellyfin-update.sh
-registrar_resultado "$?"
-/opt/fumetaos/modules/monitor/transmission-update.sh
-registrar_resultado "$?"
-/opt/fumetaos/modules/monitor/filezilla-update.sh
-registrar_resultado "$?"
-/opt/fumetaos/modules/monitor/adguard-update.sh
-registrar_resultado "$?"
-/opt/fumetaos/modules/monitor/casaos-update.sh
+ejecutar_actualizaciones
 registrar_resultado "$?"
 
 if [ -f /var/run/reboot-required ]; then

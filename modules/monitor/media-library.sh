@@ -9,7 +9,6 @@ MEDIA_ROOT="/mnt/datos/Multimedia"
 SERIES="$MEDIA_ROOT/Series"
 MOVIES="$MEDIA_ROOT/Peliculas"
 
-ERROR=0
 MAX_EXAMPLES=5
 
 es_video() {
@@ -120,13 +119,12 @@ done < <(
 		-print0 2>/dev/null
 )
 
-TOTAL_PROBLEMS=$((
-	${#loose_series[@]} +
-		${#suspicious_episodes[@]} +
-		${#misplaced_episodes[@]} +
-		${#empty_files[@]} +
-		${#unreadable_files[@]}
-))
+TOTAL_PROBLEMS=$((\
+	${#loose_series[@]} + \
+	${#suspicious_episodes[@]} + \
+	${#misplaced_episodes[@]} + \
+	${#empty_files[@]} + \
+	${#unreadable_files[@]}))
 
 if [ "$TOTAL_PROBLEMS" -eq 0 ]; then
 	echo "🟢 Organización multimedia correcta"

@@ -201,7 +201,7 @@ echo
 
 # Resultado utilizable por otros programas.
 if [ "$PUNTOS" -eq "$TOTAL" ]; then
-  exit 0
+	exit 0
 fi
 
 exit 20

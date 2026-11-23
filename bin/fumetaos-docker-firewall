@@ -9,73 +9,91 @@ LAN="192.168.1.0/24"
 TAILSCALE_INTERFACE="tailscale0"
 PEER_PORT="51413"
 
-[ "$(id -u)" -eq 0 ] || { echo "Ejecuta este comando con sudo." >&2; exit 20; }
+[ "$(id -u)" -eq 0 ] || {
+	echo "Ejecuta este comando con sudo." >&2
+	exit 20
+}
 case "${1:-apply}" in
-  apply|remove) ;;
-  *) echo "Uso: $0 [apply|remove]" >&2; exit 20 ;;
+apply | remove) ;;
+*)
+	echo "Uso: $0 [apply|remove]" >&2
+	exit 20
+	;;
 esac
-[ "$#" -le 1 ] || { echo "Demasiados argumentos." >&2; exit 20; }
+[ "$#" -le 1 ] || {
+	echo "Demasiados argumentos." >&2
+	exit 20
+}
 
 LOCK_DIRECTORY=/run/fumetaos-docker-firewall
-[ ! -L "$LOCK_DIRECTORY" ] || { echo "Directorio de bloqueo inesperado." >&2; exit 20; }
+[ ! -L "$LOCK_DIRECTORY" ] || {
+	echo "Directorio de bloqueo inesperado." >&2
+	exit 20
+}
 if [ ! -e "$LOCK_DIRECTORY" ]; then
-  install -d -m 0700 -o root -g root "$LOCK_DIRECTORY"
+	install -d -m 0700 -o root -g root "$LOCK_DIRECTORY"
 fi
 [ "$(stat -c '%u:%a' "$LOCK_DIRECTORY")" = '0:700' ] || exit 20
 [ ! -L "$LOCK_DIRECTORY/operation.lock" ] || exit 20
 exec 9>"$LOCK_DIRECTORY/operation.lock"
-flock -x -w 60 9 || { echo "Otra operación del firewall sigue activa." >&2; exit 20; }
+flock -x -w 60 9 || {
+	echo "Otra operación del firewall sigue activa." >&2
+	exit 20
+}
 
 obtener_interfaz_externa() {
-  ip -4 route get 1.1.1.1 |
-    awk '{ for (i=1; i<=NF; i++) if ($i=="dev") {print $(i+1); exit} }'
+	ip -4 route get 1.1.1.1 |
+		awk '{ for (i=1; i<=NF; i++) if ($i=="dev") {print $(i+1); exit} }'
 }
 
 reglas() {
-  printf '%s\n' '*filter' ":$CHAIN - [0:0]"
-  printf '%s\n' \
-    "-A $CHAIN -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN" \
-    "-A $CHAIN -s $LAN -i $1 -j RETURN" \
-    "-A $CHAIN -i $TAILSCALE_INTERFACE -j RETURN" \
-    "-A $CHAIN -i $1 -p tcp -m tcp --dport $PEER_PORT -j RETURN" \
-    "-A $CHAIN -i $1 -p udp -m udp --dport $PEER_PORT -j RETURN" \
-    "-A $CHAIN -i $1 -j DROP" \
-    "-A $CHAIN -j RETURN" \
-    COMMIT
+	printf '%s\n' '*filter' ":$CHAIN - [0:0]"
+	printf '%s\n' \
+		"-A $CHAIN -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN" \
+		"-A $CHAIN -s $LAN -i $1 -j RETURN" \
+		"-A $CHAIN -i $TAILSCALE_INTERFACE -j RETURN" \
+		"-A $CHAIN -i $1 -p tcp -m tcp --dport $PEER_PORT -j RETURN" \
+		"-A $CHAIN -i $1 -p udp -m udp --dport $PEER_PORT -j RETURN" \
+		"-A $CHAIN -i $1 -j DROP" \
+		"-A $CHAIN -j RETURN" \
+		COMMIT
 }
 
 aplicar() {
-  local interfaz cantidad
-  interfaz="$(obtener_interfaz_externa)"
-  [ -n "$interfaz" ] && [[ "$interfaz" =~ ^[a-zA-Z0-9_.:-]+$ ]] || exit 20
-  ip link show "$interfaz" >/dev/null
-  ip link show "$TAILSCALE_INTERFACE" >/dev/null
-  iptables -w 10 -S DOCKER-USER >/dev/null
-  reglas "$interfaz" | iptables-restore --wait 10 --noflush --test
-  reglas "$interfaz" | iptables-restore --wait 10 --noflush
-  if ! iptables -w 10 -C DOCKER-USER -j "$CHAIN" 2>/dev/null; then
-    iptables -w 10 -I DOCKER-USER 1 -j "$CHAIN"
-  fi
-  cantidad="$(iptables -w 10 -S "$CHAIN" | awk '$1=="-A" {n++} END {print n+0}')"
-  [ "$cantidad" -eq 7 ] || { echo "No se confirmaron las siete reglas." >&2; exit 20; }
-  echo "✅ Docker IPv4 protegido: siete reglas sin duplicados."
-  echo "LAN permitida: $LAN"
-  echo "Tailscale permitido: $TAILSCALE_INTERFACE"
-  echo "Transmission público: $PEER_PORT TCP y UDP"
+	local interfaz cantidad
+	interfaz="$(obtener_interfaz_externa)"
+	[ -n "$interfaz" ] && [[ "$interfaz" =~ ^[a-zA-Z0-9_.:-]+$ ]] || exit 20
+	ip link show "$interfaz" >/dev/null
+	ip link show "$TAILSCALE_INTERFACE" >/dev/null
+	iptables -w 10 -S DOCKER-USER >/dev/null
+	reglas "$interfaz" | iptables-restore --wait 10 --noflush --test
+	reglas "$interfaz" | iptables-restore --wait 10 --noflush
+	if ! iptables -w 10 -C DOCKER-USER -j "$CHAIN" 2>/dev/null; then
+		iptables -w 10 -I DOCKER-USER 1 -j "$CHAIN"
+	fi
+	cantidad="$(iptables -w 10 -S "$CHAIN" | awk '$1=="-A" {n++} END {print n+0}')"
+	[ "$cantidad" -eq 7 ] || {
+		echo "No se confirmaron las siete reglas." >&2
+		exit 20
+	}
+	echo "✅ Docker IPv4 protegido: siete reglas sin duplicados."
+	echo "LAN permitida: $LAN"
+	echo "Tailscale permitido: $TAILSCALE_INTERFACE"
+	echo "Transmission público: $PEER_PORT TCP y UDP"
 }
 
 eliminar() {
-  while iptables -w 10 -C DOCKER-USER -j "$CHAIN" 2>/dev/null; do
-    iptables -w 10 -D DOCKER-USER -j "$CHAIN"
-  done
-  if iptables -w 10 -S "$CHAIN" >/dev/null 2>&1; then
-    iptables -w 10 -F "$CHAIN"
-    iptables -w 10 -X "$CHAIN"
-  fi
-  echo "✅ Protección Docker IPv4 eliminada."
+	while iptables -w 10 -C DOCKER-USER -j "$CHAIN" 2>/dev/null; do
+		iptables -w 10 -D DOCKER-USER -j "$CHAIN"
+	done
+	if iptables -w 10 -S "$CHAIN" >/dev/null 2>&1; then
+		iptables -w 10 -F "$CHAIN"
+		iptables -w 10 -X "$CHAIN"
+	fi
+	echo "✅ Protección Docker IPv4 eliminada."
 }
 
 case "${1:-apply}" in
-  apply) aplicar ;;
-  remove) eliminar ;;
+apply) aplicar ;;
+remove) eliminar ;;
 esac

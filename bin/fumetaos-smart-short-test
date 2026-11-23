@@ -5,108 +5,118 @@ set -uo pipefail
 SHORT_LOCK=/run/lock/fumetaos-smart-test.lock
 
 smart_short_error() {
-    echo "🔴 $*" >&2
-    return 20
+	echo "🔴 $*" >&2
+	return 20
 }
 
 smart_short_ctl() {
-    if [[ -n "${WD_USB_DEVICE:-}" && "${@: -1}" == "$WD_USB_DEVICE" ]]; then
-        smartctl_cmd -d sat "$@"
-    else
-        smartctl_cmd "$@"
-    fi
+	local device="${*: -1}"
+	if [[ -n "${WD_USB_DEVICE:-}" && "$device" == "$WD_USB_DEVICE" ]]; then
+		smartctl_cmd -d sat "$@"
+	else
+		smartctl_cmd "$@"
+	fi
 }
 
 smart_short_run() {
-    local device status attempt busy log first
-    local devices=("$HDD_DEVICE" "$SSD_DEVICE")
-    local log_devices=("$HDD_DEVICE")
-    if [ -n "${WD_USB_DEVICE:-}" ]; then
-        devices+=("$WD_USB_DEVICE")
-        log_devices+=("$WD_USB_DEVICE")
-    fi
-    exec 8>"$SHORT_LOCK" || return 20
-    flock -n 8 || { smart_short_error 'Hay otra prueba SMART de FumetaOS en curso'; return 20; }
+	local device status attempt busy log first
+	local devices=("$HDD_DEVICE" "$SSD_DEVICE")
+	local log_devices=("$HDD_DEVICE")
+	if [ -n "${WD_USB_DEVICE:-}" ]; then
+		devices+=("$WD_USB_DEVICE")
+		log_devices+=("$WD_USB_DEVICE")
+	fi
+	exec 8>"$SHORT_LOCK" || return 20
+	flock -n 8 || {
+		smart_short_error 'Hay otra prueba SMART de FumetaOS en curso'
+		return 20
+	}
 
-    # Comprobar todos los discos antes de iniciar nada.
-    for device in "${devices[@]}"; do
-        status="$(smart_short_ctl -c "$device" 2>&1)" || {
-            smart_short_error "No se pudo consultar $device"; return 20;
-        }
-        if printf '%s\n' "$status" | grep -qi 'in progress'; then
-            smart_short_error "Ya hay una prueba en $device; no se interrumpe"; return 20
-        fi
-    done
+	# Comprobar todos los discos antes de iniciar nada.
+	for device in "${devices[@]}"; do
+		status="$(smart_short_ctl -c "$device" 2>&1)" || {
+			smart_short_error "No se pudo consultar $device"
+			return 20
+		}
+		if printf '%s\n' "$status" | grep -qi 'in progress'; then
+			smart_short_error "Ya hay una prueba en $device; no se interrumpe"
+			return 20
+		fi
+	done
 
-    for device in "${devices[@]}"; do
-        smart_short_ctl -t short "$device" || {
-            smart_short_error "No se pudo iniciar la prueba corta en $device"; return 20;
-        }
-    done
-    sleep 120
+	for device in "${devices[@]}"; do
+		smart_short_ctl -t short "$device" || {
+			smart_short_error "No se pudo iniciar la prueba corta en $device"
+			return 20
+		}
+	done
+	sleep 120
 
-    for ((attempt=1; attempt<=20; attempt++)); do
-        busy=0
-        for device in "${devices[@]}"; do
-            status="$(smart_short_ctl -c "$device" 2>&1)" || return 20
-            if printf '%s\n' "$status" | grep -qi 'in progress'; then
-                busy=1
-            elif ! printf '%s\n' "$status" |
-                grep -Eq 'Self-test execution status:[[:space:]]*\([[:space:]]*0\)'; then
-                smart_short_error "La prueba corta no terminó correctamente en $device"; return 20
-            fi
-        done
-        [ "$busy" -eq 0 ] && break
-        if [ "$attempt" -eq 20 ]; then
-            smart_short_error 'La prueba corta sigue en curso tras el plazo previsto'; return 20
-        fi
-        sleep 30
-    done
+	for ((attempt = 1; attempt <= 20; attempt++)); do
+		busy=0
+		for device in "${devices[@]}"; do
+			status="$(smart_short_ctl -c "$device" 2>&1)" || return 20
+			if printf '%s\n' "$status" | grep -qi 'in progress'; then
+				busy=1
+			elif ! printf '%s\n' "$status" |
+				grep -Eq 'Self-test execution status:[[:space:]]*\([[:space:]]*0\)'; then
+				smart_short_error "La prueba corta no terminó correctamente en $device"
+				return 20
+			fi
+		done
+		[ "$busy" -eq 0 ] && break
+		if [ "$attempt" -eq 20 ]; then
+			smart_short_error 'La prueba corta sigue en curso tras el plazo previsto'
+			return 20
+		fi
+		sleep 30
+	done
 
-    for device in "${log_devices[@]}"; do
-        log="$(smart_short_ctl -l selftest "$device" 2>&1)" || return 20
-        first="$(printf '%s\n' "$log" | awk '/^# *1[[:space:]]/ {print; exit}')"
-        if [[ "$first" != *Short* || "$first" != *'Completed without error'* ]]; then
-            smart_short_error "El registro no confirma la última prueba corta en $device"; return 20
-        fi
-    done
-    for device in "${devices[@]}"; do
-        status="$(smart_short_ctl -H "$device" 2>&1)" || {
-            if [[ "$status" == *FAILED* ]]; then
-                smart_short_error "Salud SMART incorrecta en $device"
-            fi
-            return 20
-        }
-        printf '%s\n' "$status" | grep -q PASSED || return 20
-    done
-    if [ -n "${WD_USB_DEVICE:-}" ]; then
-        echo '✅ HDD, SSD y WD USB: pruebas SMART cortas terminadas sin errores; salud SMART correcta'
-    else
-        echo '✅ HDD y SSD: pruebas SMART cortas terminadas sin errores; salud SMART correcta'
-    fi
+	for device in "${log_devices[@]}"; do
+		log="$(smart_short_ctl -l selftest "$device" 2>&1)" || return 20
+		first="$(printf '%s\n' "$log" | awk '/^# *1[[:space:]]/ {print; exit}')"
+		if [[ "$first" != *Short* || "$first" != *'Completed without error'* ]]; then
+			smart_short_error "El registro no confirma la última prueba corta en $device"
+			return 20
+		fi
+	done
+	for device in "${devices[@]}"; do
+		status="$(smart_short_ctl -H "$device" 2>&1)" || {
+			if [[ "$status" == *FAILED* ]]; then
+				smart_short_error "Salud SMART incorrecta en $device"
+			fi
+			return 20
+		}
+		printf '%s\n' "$status" | grep -q PASSED || return 20
+	done
+	if [ -n "${WD_USB_DEVICE:-}" ]; then
+		echo '✅ HDD, SSD y WD USB: pruebas SMART cortas terminadas sin errores; salud SMART correcta'
+	else
+		echo '✅ HDD y SSD: pruebas SMART cortas terminadas sin errores; salud SMART correcta'
+	fi
 }
 
 smart_short_main() {
-    if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
-        echo 'Ejecutar sin argumentos como root' >&2
-        return 20
-    fi
-    source /opt/fumetaos/core/common.sh
-    command -v smartctl >/dev/null 2>&1 || return 20
-    local result=0
-    local WD_USB_DEVICE=/dev/disk/by-id/usb-WD_Elements_25A3_3444475A3245315A-0:0
-    if [ ! -b "$WD_USB_DEVICE" ]; then
-        echo 'ℹ️ WD USB desconectado; se comprueban los discos internos'
-        WD_USB_DEVICE=
-    fi
-    smart_short_run || result=$?
-    if [ "$result" -ne 0 ] && [ -x /opt/fumetaos/bin/telegram-notify ]; then
-        printf '%s\n' '🚨 FumetaOS: falló la prueba SMART corta. Consulta su registro.' |
-            /opt/fumetaos/bin/telegram-notify || true
-    fi
-    return "$result"
+	if [ "$#" -ne 0 ] || [ "$(id -u)" -ne 0 ]; then
+		echo 'Ejecutar sin argumentos como root' >&2
+		return 20
+	fi
+	source /opt/fumetaos/core/common.sh
+	command -v smartctl >/dev/null 2>&1 || return 20
+	local result=0
+	local WD_USB_DEVICE=/dev/disk/by-id/usb-WD_Elements_25A3_3444475A3245315A-0:0
+	if [ ! -b "$WD_USB_DEVICE" ]; then
+		echo 'ℹ️ WD USB desconectado; se comprueban los discos internos'
+		WD_USB_DEVICE=
+	fi
+	smart_short_run || result=$?
+	if [ "$result" -ne 0 ] && [ -x /opt/fumetaos/bin/telegram-notify ]; then
+		printf '%s\n' '🚨 FumetaOS: falló la prueba SMART corta. Consulta su registro.' |
+			/opt/fumetaos/bin/telegram-notify || true
+	fi
+	return "$result"
 }
 
 if [ "${BASH_SOURCE[0]}" = "$0" ]; then
-    smart_short_main "$@"
+	smart_short_main "$@"
 fi

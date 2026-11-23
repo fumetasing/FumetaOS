@@ -48,7 +48,7 @@ elif ! findmnt -rn -M "$CASAOS_MOUNT" >/dev/null 2>&1; then
 	echo "   Punto esperado: $CASAOS_MOUNT"
 	ERROR=20
 
-elif ! ls "$CASAOS_MOUNT" >/dev/null 2>&1; then
+elif ! timeout --kill-after=5 15 ls "$CASAOS_MOUNT" >/dev/null 2>&1; then
 
 	echo "🔴 Time Capsule montada pero sin acceso desde CasaOS"
 	echo "   Punto: $CASAOS_MOUNT"
@@ -57,7 +57,7 @@ elif ! ls "$CASAOS_MOUNT" >/dev/null 2>&1; then
 else
 	acceso_disponible=1
 	ESPACIO="$(
-		df -hP "$TIMECAPSULE_MOUNT" |
+		timeout --kill-after=5 15 df -hP "$TIMECAPSULE_MOUNT" |
 			awk 'NR == 2 { gsub("%", "", $5); print $4 "|" $5 }'
 	)"
 

@@ -50,7 +50,7 @@ Zona horaria: Europe/Madrid.
 - Los informes programados de Telegram se envían a las 07:15 y a las 21:45
   mediante un ajuste local del temporizador. Los informes programados consultan el
   estado SMART en directo y pueden despertar los tres discos. El informe manual
-  respeta el reposo y muestra el último resultado nocturno del USB WD. En este
+  respeta el reposo y muestra el último resultado nocturno de los discos dormidos. En este
   servidor, el sondeo periódico de Ubuntu con `smartd` omite los discos en reposo.
 - La sección Discos muestra Data WD, Time Machine WD y Time Capsule SMB. Con la
   configuración predeterminada, los discos aparecen en naranja desde el 90 %
@@ -124,7 +124,13 @@ PYTHONDONTWRITEBYTECODE=1 python3 tests/test_jellyfin_mount_guard.py
 GitHub Actions ejecuta las pruebas de Bash y Python en los cambios del
 repositorio. El test nocturno simula systemd y valida trece escenarios, incluido el paso de
 limpieza Docker. No se deben sustituir estas pruebas por iniciar la cadena real.
-`bin/fumetaos-quality` requiere Bash, Git, ShellCheck y shfmt.
+`bin/fumetaos-quality` requiere Bash, Python 3, Git, ShellCheck y shfmt. Comprueba
+la sintaxis de Bash y Python, el análisis estático, el formato y los espacios.
+
+El informe consulta las actualizaciones independientes en paralelo y presenta
+los resultados en su orden habitual. El monitor de aplicaciones agrupa la
+consulta de versiones de las imágenes de Docker y conserva la consulta individual
+como respaldo cuando una referencia no aparece en la respuesta agrupada.
 
 ## Seguridad y recuperación
 

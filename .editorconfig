@@ -1,39 +1,23 @@
-(
-    set -euo pipefail
+root = true
 
-    cd ~/Proyectos/FumetaOS
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
 
-    mapfile -d '' CHECK_FILES < <(
-        find bin core modules apps install \
-            -type f \
-            \( -name '*.sh' -o -path 'bin/*' \) \
-            -print0 |
-            sort -z
-    )
+[*.sh]
+indent_style = tab
+indent_size = 4
 
-    echo "===== FORMATEANDO SCRIPTS ====="
-    shfmt -w "${CHECK_FILES[@]}"
+[bin/*]
+indent_style = tab
+indent_size = 4
 
-    echo
-    echo "===== COMPROBANDO FORMATO ====="
-    shfmt -d "${CHECK_FILES[@]}"
+[*.py]
+indent_style = space
+indent_size = 4
 
-    echo
-    echo "===== COMPROBANDO SINTAXIS ====="
-    for FILE in "${CHECK_FILES[@]}"
-    do
-        bash -n "$FILE"
-    done
-
-    echo
-    echo "===== COMPROBANDO CAMBIOS ====="
-    git diff --check
-    git diff --stat
-
-    echo
-    echo "===== ESTADO ====="
-    git status --short
-
-    echo
-    echo "✅ Formato uniforme aplicado correctamente"
-)
+[bin/fumetaos-jellyfin-mount-guard]
+indent_style = space
+indent_size = 4

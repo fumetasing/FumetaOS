@@ -21,6 +21,7 @@ declare -A PROJECT_HEALTH
 declare -A CONTAINER_IMAGE
 declare -A CONTAINER_HEALTH
 declare -A CONTAINER_PORTS
+declare -A IMAGE_VERSION
 
 app_name() {
 	case "$1" in
@@ -155,15 +156,18 @@ app_version() {
 	container="$(main_container "$project")"
 	image="${CONTAINER_IMAGE[$container]-}"
 
-	version="$(
-		docker image inspect \
-			--format '{{index .Config.Labels "org.opencontainers.image.version"}}' \
-			"$image" 2>/dev/null || true
-	)"
+	if [ -n "$image" ] && [ -n "${IMAGE_VERSION[$image]+cached}" ]; then
+		version="${IMAGE_VERSION[$image]}"
+	else
+		version="$(
+			docker image inspect \
+				--format '{{index .Config.Labels "org.opencontainers.image.version"}}' \
+				"$image" 2>/dev/null || true
+		)"
+	fi
 
 	case "$version" in
-	"" | "<no value>")
-		;;
+	"" | "<no value>") ;;
 	*)
 		echo "$version"
 		return
@@ -194,7 +198,7 @@ app_health() {
 	case "$project" in
 	transmission)
 		response="$(
-			curl -si \
+			curl --connect-timeout 5 --max-time 10 -si \
 				http://localhost:9091/transmission/rpc/ \
 				2>/dev/null
 		)"
@@ -210,10 +214,10 @@ app_health() {
 		return
 		;;
 	jellyfin)
-		if curl -fs \
+		if curl --connect-timeout 5 --max-time 10 -fs \
 			http://localhost:8097/health \
 			>/dev/null 2>&1 ||
-			curl -fs \
+			curl --connect-timeout 5 --max-time 10 -fs \
 				http://localhost:8097/ \
 				>/dev/null 2>&1; then
 			echo "healthy"
@@ -253,6 +257,24 @@ app_health() {
 	fi
 }
 
+load_image_versions() {
+	local image version
+	local -a images
+
+	[ "${#CONTAINER_IMAGE[@]}" -gt 0 ] || return 0
+	mapfile -t images < <(printf '%s\n' "${CONTAINER_IMAGE[@]}" | sort -u)
+
+	# Guardar las etiquetas una vez; cada referencia conserva su versión.
+	while IFS='|' read -r image version; do
+		[ -n "$image" ] || continue
+		IMAGE_VERSION["$image"]="$version"
+	done < <(
+		docker image inspect --format \
+			'{{$version := index .Config.Labels "org.opencontainers.image.version"}}{{range .RepoTags}}{{printf "%s|%s\n" . $version}}{{end}}{{range .RepoDigests}}{{printf "%s|%s\n" . $version}}{{end}}{{printf "%s|%s" .Id $version}}' \
+			"${images[@]}" 2>/dev/null || true
+	)
+}
+
 load_container_cache() {
 	local project
 	local container
@@ -260,6 +282,9 @@ load_container_cache() {
 	local image
 	local health
 	local ports
+	local cache
+
+	cache="$(docker ps -a --format '{{.Label "com.docker.compose.project"}}|{{.Names}}|{{.State}}|{{.Image}}|{{.HealthStatus}}|{{.Ports}}')" || return 20
 
 	while IFS='|' read -r project container state image health ports; do
 		[ -n "$project" ] || continue
@@ -281,11 +306,7 @@ load_container_cache() {
 		CONTAINER_IMAGE["$container"]="$image"
 		CONTAINER_HEALTH["$container"]="${health:-none}"
 		CONTAINER_PORTS["$container"]="$ports"
-	done < <(
-		docker ps -a \
-			--format \
-			'{{.Label "com.docker.compose.project"}}|{{.Names}}|{{.State}}|{{.Image}}|{{.HealthStatus}}|{{.Ports}}'
-	)
+	done <<<"$cache"
 
 	if [ "${#PROJECTS[@]}" -gt 0 ]; then
 		mapfile -t PROJECTS < <(
@@ -295,17 +316,20 @@ load_container_cache() {
 	fi
 }
 
-if ! docker info >/dev/null 2>&1; then
+if ! load_container_cache; then
 	echo "🔴 Docker no está disponible para el usuario actual"
 	exit 20
 fi
-
-load_container_cache
+load_image_versions
 
 for PROJECT in "${PROJECTS[@]}"; do
 	CONTAINERS="${PROJECT_CONTAINER_COUNT[$PROJECT]:-0}"
 	RUNNING="${PROJECT_RUNNING_COUNT[$PROJECT]:-0}"
-	HEALTH="$(app_health "$PROJECT")"
+	if [ "$CONTAINERS" -gt 0 ] && [ "$RUNNING" -eq "$CONTAINERS" ]; then
+		HEALTH="$(app_health "$PROJECT")"
+	else
+		HEALTH=unhealthy
+	fi
 
 	PROJECT_HEALTH["$PROJECT"]="$HEALTH"
 
@@ -338,11 +362,11 @@ for PROJECT in "${PROJECTS[@]}"; do
 
 	if [ "$CONTAINERS" -gt 0 ] &&
 		[ "$RUNNING" -eq "$CONTAINERS" ]; then
-		if [ "$HEALTH" = "starting" ]; then
-			echo "🟠 $NAME"
-		else
-			echo "🟢 $NAME"
-		fi
+		case "$HEALTH" in
+		starting) echo "🟠 $NAME" ;;
+		unhealthy) echo "🔴 $NAME" ;;
+		*) echo "🟢 $NAME" ;;
+		esac
 
 		if [ -n "$DESCRIPTION" ]; then
 			echo "   $DESCRIPTION"

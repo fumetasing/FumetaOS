@@ -19,16 +19,16 @@ mac_mirror_enviar_telegram() {
 }
 
 mac_mirror_configurar_rsync() {
-    RSYNC_DELETE_OPTIONS=(-a --no-owner --no-group --dry-run --delete-delay --itemize-changes --out-format='%i' --mkpath)
-    RSYNC_COPY_OPTIONS=(-a --xattrs --chown=server:server --delete-delay --partial --human-readable --stats --progress --mkpath)
+	RSYNC_DELETE_OPTIONS=(-a --no-owner --no-group --dry-run --delete-delay --itemize-changes --out-format='%i' --mkpath)
+	RSYNC_COPY_OPTIONS=(-a --xattrs --chown=server:server --delete-delay --partial --human-readable --stats --progress --mkpath)
 }
 
 mac_mirror_usb_disponible() {
-    local mount=/mnt/data-wd free
-    [ "$(findmnt -n -o UUID -M "$mount")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ] || return 20
-    [ ! -L "$mount/FumetaOS-Server" ] && [ -w "$mount" ] || return 20
-    free=$(df -k --output=avail -- "$mount" | tail -1) || return 20
-    [[ "$free" =~ ^[[:space:]]*[0-9]+$ ]] && (( free >= MINIMUM_FREE_KB ))
+	local mount=/mnt/data-wd free
+	[ "$(findmnt -n -o UUID -M "$mount")" = 87d65071-48b3-439c-8e8d-4216f3c60d5d ] || return 20
+	[ ! -L "$mount/FumetaOS-Server" ] && [ -w "$mount" ] || return 20
+	free=$(df -k --output=avail -- "$mount" | tail -1) || return 20
+	[[ "$free" =~ ^[[:space:]]*[0-9]+$ ]] && ((free >= MINIMUM_FREE_KB))
 }
 
 mac_mirror_contar_borrados() {
