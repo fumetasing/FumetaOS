@@ -80,6 +80,9 @@ printf '%s\\n' '{"ok":true}'
                 self.assertNotEqual(result.returncode, 0)
 
     def long_test(self, status):
+        self.stub('smartctl', 'exit 99\n')
+        reply = ('return 1' if status is None else
+                 f"echo 'Self-test execution status: ({status}) test result'")
         stub = f'''HDD_DEVICE=hdd
 SSD_DEVICE=ssd
 HDD_NAME=HDD
@@ -93,7 +96,7 @@ smartctl_cmd() {{
  -H) echo PASSED ;;
  -c)
    if [[ "$2" == ssd && -e "{self.folder}/started" ]]; then
-     echo 'Self-test execution status: ({status}) test result'
+     {reply}
    else
      echo 'Self-test execution status: (0) completed without error'
    fi ;;
@@ -109,7 +112,13 @@ smartctl_cmd() {{
     def test_long_smart_rejects_aborted_ssd_even_when_health_passes(self):
         result = self.long_test(16)
         self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
+        self.assertIn('SSD Sistema: la prueba larga no terminó correctamente', result.stdout)
         self.assertNotIn('✅ Pruebas SMART largas terminadas correctamente', result.stdout)
+
+    def test_long_smart_reports_unreadable_ssd_status(self):
+        result = self.long_test(None)
+        self.assertEqual(result.returncode, 20, result.stdout + result.stderr)
+        self.assertIn('No se pudo consultar el resultado SMART del SSD Sistema', result.stdout)
 
     def test_long_smart_accepts_completed_ssd(self):
         result = self.long_test(0)

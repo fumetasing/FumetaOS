@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.61
+
+- Aísla las simulaciones de la prueba SMART larga para que funcionen también en entornos sin smartctl instalado, como GitHub Actions.
+- Comprueba explícitamente los resultados abortados y los errores de consulta del SSD. La batería incluye 80 pruebas de Python.
+
 ## v2.4.60
 
 - Coordina las pruebas SMART con el reposo independiente de cada disco. La larga suspende el del HDD Datos y la corta los de los discos que comprueba. Al finalizar se reactivan siempre los controles disponibles, incluso tras un fallo, cancelación o tiempo máximo.
