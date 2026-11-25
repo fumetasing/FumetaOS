@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.64
+
+- Muestra las actualizaciones de Jellyfin, Transmission, FileZilla, AdGuard Home y CasaOS en naranja.
+- Discos y Time Capsule aparecen en amarillo del 90 al 92 %, naranja al 93 % y rojo desde el 94 %. El estado general reserva el nivel crítico para valores por encima del 93 %.
+
 ## v2.4.63
 
 - Restaura el amarillo para los avisos de Telegram, incluidos los indicadores de uso y las actualizaciones disponibles.

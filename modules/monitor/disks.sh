@@ -34,9 +34,14 @@ check_disk() {
 		return
 	fi
 
-	if [ "$use" -ge "$DISK_CRITICAL" ]; then
+	if [ "$use" -gt "$DISK_CRITICAL" ]; then
 		color=🔴
 		ERROR=20
+	elif [ "$use" -ge "$DISK_CRITICAL" ]; then
+		color=🟠
+		if [ "$ERROR" -eq 0 ]; then
+			ERROR=10
+		fi
 	elif [ "$use" -ge "$DISK_WARNING" ]; then
 		color=🟡
 		if [ "$ERROR" -eq 0 ]; then

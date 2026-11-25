@@ -67,9 +67,12 @@ else
 	if [[ ! "$USO" =~ ^[0-9]+$ ]]; then
 		echo "🔴 No se pudo determinar el uso de Time Capsule"
 		ERROR=20
-	elif [ "$USO" -ge "$DISK_CRITICAL" ]; then
+	elif [ "$USO" -gt "$DISK_CRITICAL" ]; then
 		echo "🔴 Time Capsule SMB — espacio crítico"
 		ERROR=20
+	elif [ "$USO" -ge "$DISK_CRITICAL" ]; then
+		echo "🟠 Time Capsule SMB — vigilar espacio"
+		ERROR=10
 	elif [ "$USO" -ge "$DISK_WARNING" ]; then
 		echo "🟡 Time Capsule SMB — vigilar espacio"
 		ERROR=10
@@ -86,8 +89,8 @@ else
 	case "$USO" in
 	'' | *[!0-9]*) ;;
 	*)
-		if [ "$USO" -ge "$DISK_CRITICAL" ]; then
-			echo "   Umbral: crítico desde ${DISK_CRITICAL}%"
+		if [ "$USO" -gt "$DISK_CRITICAL" ]; then
+			echo "   Umbral: crítico por encima del ${DISK_CRITICAL}%"
 		elif [ "$USO" -ge "$DISK_WARNING" ]; then
 			echo "   Umbral: aviso desde ${DISK_WARNING}%"
 		fi

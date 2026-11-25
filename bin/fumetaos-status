@@ -44,7 +44,7 @@ fi
 
 if [ "$CPU" -ge "$CPU_CRITICAL" ] ||
 	[ "$RAM" -ge "$RAM_CRITICAL" ] ||
-	[ "$DATA_DISK" -ge "$DISK_CRITICAL" ]; then
+	[ "$DATA_DISK" -gt "$DISK_CRITICAL" ]; then
 	STATUS="🔴 REVISAR"
 fi
 
