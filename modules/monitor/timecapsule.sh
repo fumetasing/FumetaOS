@@ -71,7 +71,7 @@ else
 		echo "🔴 Time Capsule SMB — espacio crítico"
 		ERROR=20
 	elif [ "$USO" -ge "$DISK_WARNING" ]; then
-		echo "🟠 Time Capsule SMB — vigilar espacio"
+		echo "🟡 Time Capsule SMB — vigilar espacio"
 		ERROR=10
 	else
 		echo "🟢 Time Capsule SMB"

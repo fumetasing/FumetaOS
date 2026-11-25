@@ -48,8 +48,8 @@ esperar_prueba() {
 		restante=$((LIMITE - SECONDS))
 		if (( restante <= 0 )); then
 			local mensaje="$nombre: prueba larga aún en curso al alcanzar el límite de espera"
-			echo "🟠 $mensaje"
-			enviar_telegram "🟠 FumetaOS SMART
+			echo "🟡 $mensaje"
+			enviar_telegram "🟡 FumetaOS SMART
 
 $mensaje
 

@@ -107,5 +107,5 @@ exit 99
     def test_unavailable_journal_is_reported_as_unconfirmed(self):
         result = self.history(failed_journal_unit="fumetaos-mac-backup.service")
         self.assertEqual(result.returncode, 10, result.stdout + result.stderr)
-        self.assertIn("🟠 Espejo general a Data WD", result.stdout)
+        self.assertIn("🟡 Espejo general a Data WD", result.stdout)
         self.assertIn("estado no confirmado", result.stdout)

@@ -363,7 +363,7 @@ for PROJECT in "${PROJECTS[@]}"; do
 	if [ "$CONTAINERS" -gt 0 ] &&
 		[ "$RUNNING" -eq "$CONTAINERS" ]; then
 		case "$HEALTH" in
-		starting) echo "🟠 $NAME" ;;
+		starting) echo "🟡 $NAME" ;;
 		unhealthy) echo "🔴 $NAME" ;;
 		*) echo "🟢 $NAME" ;;
 		esac
@@ -382,7 +382,7 @@ for PROJECT in "${PROJECTS[@]}"; do
 
 		case "$HEALTH" in
 		starting)
-			echo "   Health: 🟠 Arrancando; comprobación en curso"
+			echo "   Health: 🟡 Arrancando; comprobación en curso"
 			;;
 		healthy)
 			echo "   Health: 🟢 healthy"
@@ -392,7 +392,7 @@ for PROJECT in "${PROJECTS[@]}"; do
 			ERROR=20
 			;;
 		*)
-			echo "   Health: 🟠 Sin healthcheck"
+			echo "   Health: 🟡 Sin healthcheck"
 			;;
 		esac
 	else

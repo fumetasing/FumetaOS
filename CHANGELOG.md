@@ -1,5 +1,10 @@
 # FumetaOS Changelog
 
+## v2.4.63
+
+- Restaura el amarillo para los avisos de Telegram, incluidos los indicadores de uso y las actualizaciones disponibles.
+- Mantiene los límites de discos: aviso desde el 90 % y rojo desde el 93 %.
+
 ## v2.4.62
 
 - Consulta el progreso SMART cada cinco minutos, con un máximo de doce horas, y avisa en naranja si al alcanzar el límite la prueba sigue en curso.

@@ -69,5 +69,5 @@ if [ "$digest_local" = "$digest_remoto" ]; then
 	echo "🟢 AdGuard Home al día ($version_local)"
 	exit 0
 fi
-echo "🟠 AdGuard Home: actualización disponible (actual: $version_local)"
+echo "🟡 AdGuard Home: actualización disponible (actual: $version_local)"
 exit 10

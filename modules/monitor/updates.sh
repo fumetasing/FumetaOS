@@ -72,7 +72,7 @@ if [ "$graduales" -gt 0 ]; then
 fi
 
 if [ "$aplicables" -lt 50 ]; then
-	mostrar_estado "🟠" "$MENSAJE"
+	mostrar_estado "🟡" "$MENSAJE"
 	exit 10
 fi
 

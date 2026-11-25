@@ -253,7 +253,7 @@ case "$ERROR" in
 	echo "🟢 Estado general: PERFECTO"
 	;;
 10)
-	echo "🟠 Estado general: AVISOS"
+	echo "🟡 Estado general: AVISOS"
 	;;
 *)
 	echo "🔴 Estado general: REVISAR"

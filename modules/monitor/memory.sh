@@ -29,7 +29,7 @@ if [ "$USO" -lt "$RAM_WARNING" ]; then
 	exit 0
 elif [ "$USO" -lt "$RAM_CRITICAL" ]; then
 	if [ "$WATCH" -eq 0 ]; then
-		echo "🟠 Uso: ${USO}%"
+		echo "🟡 Uso: ${USO}%"
 		echo "   $MEMORIA"
 	else
 		echo "RAM al ${USO}%"

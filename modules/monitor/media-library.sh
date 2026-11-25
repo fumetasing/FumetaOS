@@ -134,7 +134,7 @@ if [ "$TOTAL_PROBLEMS" -eq 0 ]; then
 	exit 0
 fi
 
-echo "🟠 Biblioteca multimedia: $TOTAL_PROBLEMS elementos para revisar"
+echo "🟡 Biblioteca multimedia: $TOTAL_PROBLEMS elementos para revisar"
 
 if [ "${#loose_series[@]}" -gt 0 ]; then
 	mostrar_ejemplos \

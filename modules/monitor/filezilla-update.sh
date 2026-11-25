@@ -82,5 +82,5 @@ if [ "$digest_local" = "$digest_remoto" ]; then
 	echo "🟢 FileZilla al día ($version_local)"
 	exit 0
 fi
-echo "🟠 FileZilla: actualización disponible (actual: $version_local)"
+echo "🟡 FileZilla: actualización disponible (actual: $version_local)"
 exit 10

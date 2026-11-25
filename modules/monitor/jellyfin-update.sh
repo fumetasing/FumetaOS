@@ -68,5 +68,5 @@ if [ "$digest_local" = "$digest_remoto" ]; then
 	exit 0
 fi
 
-echo "🟠 Jellyfin: actualización disponible (actual: $version_local)"
+echo "🟡 Jellyfin: actualización disponible (actual: $version_local)"
 exit 10

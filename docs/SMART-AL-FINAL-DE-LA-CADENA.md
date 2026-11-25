@@ -9,7 +9,7 @@ Las pruebas SMART se inician al terminar las copias, la actualización de Ubuntu
 - El servicio corto comparte bloqueo con el largo y comprueba que no haya una prueba de disco en curso antes de iniciar nada.
 - La cadena espera la comprobación y registra el fallo si no termina correctamente. Los horarios de Telegram y la verificación cifrada no cambian.
 
-La prueba larga consulta el progreso cada cinco minutos, con un máximo de doce horas de espera compartida. Si al llegar al límite sigue en curso, lo indica con un aviso en naranja. Systemd concede quince minutos adicionales para el arranque y la salida. La corta tiene un límite de quince minutos. La cadena nocturna ejecuta ambos servicios.
+La prueba larga consulta el progreso cada cinco minutos, con un máximo de doce horas de espera compartida. Si al llegar al límite sigue en curso, lo indica con un aviso en amarillo. Systemd concede quince minutos adicionales para el arranque y la salida. La corta tiene un límite de quince minutos. La cadena nocturna ejecuta ambos servicios.
 
 El lunes, la prueba larga va después de la verificación cifrada semanal.
 
